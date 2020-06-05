@@ -5,8 +5,6 @@ date: 2020-06-04
 classes: wide
 ---
 
-#### *Summary*:
-
 This is a short overview of the x86 assembly instruction set in a windows environment for complete *beginners*. We will tediously walk through a "helloworld" program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and compiled to machine code, their resulting executables can easily be disassembled. Knowledge of assembly language will allow you to make your high level code faster, reverse engineer complex executables including malware, and write low level functionality like boot loaders. Like all complex topics, the basics come first and there is a lot to unpack when programming without many layers of abstraction.
 
 #### *Resources*
