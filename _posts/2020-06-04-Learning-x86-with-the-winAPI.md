@@ -79,7 +79,7 @@ In assembly we will have to push arguments to functions onto the stack using the
 
 We will get back to dealing with the stack after setting up our assembly program:
 
-```assembly
+```c
 [BITS 32]
 global main
 
@@ -104,7 +104,7 @@ The assembler needs to distinguish between executable code and data in memory. H
 
 Now lets begin by using `GetStdHandle` to get our handle to standard out:
 
-```assembly
+```c
 section .text
     main:
         push    dword -11       ; push STD_OUTPUT_HANDLE (defined as -11) onto the stack
@@ -125,7 +125,7 @@ It takes one argument. From the documentation of the function the `nStdHandle` a
 
 By calling convention, the returned handle will be in the `eax` register which will come in handy when calling [WriteConsoleA](https://docs.microsoft.com/en-us/windows/console/writeconsole):
 
-```assembly
+```c
 push    dword 0         ; arg 5
 push    buff_out        ; arg 4
 push    dword msglen    ; arg 3
@@ -150,7 +150,7 @@ By calling convention, arguments are pushed onto the stack from right to left. S
 
 Putting these parts together and adding [ExitProcess](https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess) gives us a complete program, ready to be assembled:
 
-```assembly
+```c
 [BITS 32]
 global main
 
@@ -213,7 +213,7 @@ Below is the code:
 
 -
 
-```assembly
+```c
 [BITS 32]
 global main
 
