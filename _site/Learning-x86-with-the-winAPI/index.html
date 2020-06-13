@@ -1,0 +1,661 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.19.2 by Michael Rose
+  Copyright 2013-2019 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Learning x86 with the winAPI -</title>
+<meta name="description" content="This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and compiled to machine code, their resulting executables can easily be disassembled. Knowledge of assembly language will allow you to make your high level code faster, reverse engineer complex executables including malware, and write low level functionality like boot loaders. Like all complex topics, the basics come first and there is a lot to unpack when programming without many layers of abstraction.">
+
+
+  <meta name="author" content="Jayson Hurst">
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="">
+<meta property="og:title" content="Learning x86 with the winAPI">
+<meta property="og:url" content="http://localhost:4000/Learning-x86-with-the-winAPI/">
+
+
+  <meta property="og:description" content="This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and compiled to machine code, their resulting executables can easily be disassembled. Knowledge of assembly language will allow you to make your high level code faster, reverse engineer complex executables including malware, and write low level functionality like boot loaders. Like all complex topics, the basics come first and there is a lot to unpack when programming without many layers of abstraction.">
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2020-06-04T00:00:00-04:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/Learning-x86-with-the-winAPI/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "jayo78",
+      "url": "http://localhost:4000/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title=" Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.png" alt=""></a>
+        
+        <a class="site-title" href="/">
+          
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Home</a>
+            </li><li class="masthead__menu-item">
+              <a href="/year-archive/">Posts</a>
+            </li><li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="http://localhost:4000/" itemprop="item"><span itemprop="name">Home</span></a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">Learning x86 with the winAPI</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/avatar.jpg" alt="Jayson Hurst" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jayson Hurst</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Aspiring security researcher<br />Student at UMD</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">Philadelphia, PA</span>
+        </li>
+      
+
+      
+        
+          
+            <li><a href="https://www.linkedin.com/in/jayo78" rel="nofollow noopener noreferrer"><i class="fas fa-fw fa-link" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+      
+
+      
+
+      
+        <li>
+          <a href="mailto:jhurst1@terpmail.umd.edu">
+            <meta itemprop="email" content="jhurst1@terpmail.umd.edu" />
+            <i class="fas fa-fw fa-envelope-square" aria-hidden="true"></i><span class="label">Email</span>
+          </a>
+        </li>
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Learning x86 with the winAPI">
+    <meta itemprop="description" content="This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and compiled to machine code, their resulting executables can easily be disassembled. Knowledge of assembly language will allow you to make your high level code faster, reverse engineer complex executables including malware, and write low level functionality like boot loaders. Like all complex topics, the basics come first and there is a lot to unpack when programming without many layers of abstraction.">
+    <meta itemprop="datePublished" content="2020-06-04T00:00:00-04:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Learning x86 with the winAPI
+</h1>
+          
+            <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  8 minute read
+
+</p>
+          
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>This is a short overview of the x86 assembly instruction set in a windows environment for complete <em>beginners</em>. We will tediously walk through a “helloworld” program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and compiled to machine code, their resulting executables can easily be disassembled. Knowledge of assembly language will allow you to make your high level code faster, reverse engineer complex executables including malware, and write low level functionality like boot loaders. Like all complex topics, the basics come first and there is a lot to unpack when programming without many layers of abstraction.</p>
+
+<h4 id="resources"><em>Resources</em></h4>
+
+<p>Its important to gain a grasp of some of the instructions used, CPU registers, and binary encoding before continuing. I recommend reading the following guides if this is your first time seeing assembly.</p>
+
+<ul>
+  <li><a href="http://www.cs.virginia.edu/~evans/cs216/guides/x86.html">cs.virginia.edu general guide</a></li>
+  <li><a href="https://en.wikibooks.org/wiki/X86_Assembly/Print_Version">wiki book</a></li>
+  <li>Don’t wanna read? - there are good YouTube guides out there!</li>
+</ul>
+
+<h4 id="starting-out"><em>Starting out</em></h4>
+
+<p>x86 represents an instruction set and CPU architecture used by Intel processors. Windows 10 supports both 32 bit and 64 bit instructions, referred to as x86 and x86_64 respectfully. The 32 bit version is a core subset of its 64 bit successor and Windows has strong backwards compatibility. Because of this, many applications still ship 32 bit versions. We will be working with 32 bit instructions in this overview, but it is easy to extend to 64 bit.</p>
+
+<h6 id="assembling">Assembling:</h6>
+
+<p>A program written in assembly is still an abstraction away from its final machine code form. The instructions need to be “assembled” into machine code specific to a CPU using an <em>assembler</em>. An assembler is nothing more than a program that can translate assembly instructions into relevant machine opcodes. Most x86 assemblers also optimize instructions for increased speed.</p>
+
+<p>Various assemblers have different syntaxes and features, but all have the ability to produce machine code given assembly instructions. This initially generated machine code is called an object file (<code class="language-plaintext highlighter-rouge">.obj</code>), which is usually not directly executable. This intermediate object code form can later be <em>linked</em> with operating system specific libraries to create a native executable.</p>
+
+<p><img src="/assets/images/assembler.png" alt="Capture" /></p>
+
+<h6 id="linking">Linking:</h6>
+
+<p>Object files enable modular software that is efficient, easy to troubleshoot and update, and usually faster. In practice, software development involves compiling languages like C/C++ or assembling as previously mentioned to an object file that contains code that may depend on the other files. Since software by nature is constantly fixed and updated, instead of recompiling the entire project, it is much easier to update and recompile a specific object file and then <em>link</em> it back together with the others. This is the purpose of the <em>linker</em>.</p>
+
+<p>In addition to resolving your project specific object file dependencies, the linker will need to load code from the operating system in order to run natively. An OS like Windows provides functionality for running applications through the use of shared library’s. Windows utilizes <strong>Dynamically Linked Libraries</strong> to provide code and data to more than one program at a time - <a href="https://support.microsoft.com/en-us/help/815065/what-is-a-dll">DLL info</a>.</p>
+
+<p>DLLs provide shared access to winAPI functions. The most used by programs are the <code class="language-plaintext highlighter-rouge">kernel32.dll</code>, <code class="language-plaintext highlighter-rouge">user32.dll</code>, and <code class="language-plaintext highlighter-rouge">ntdll.dll</code> DLLs. These provide access to commonly used functions that we can use to write condensed programs.</p>
+
+<p>Now with pretext we can fully understand the linker that creates a final executable:</p>
+
+<p><img src="/assets/images/linker.png" alt="linker" /></p>
+
+<h6 id="what-we-will-use">What we will use:</h6>
+
+<ul>
+  <li><a href="https://www.nasm.us/doc/">NASM (Networkwide Assembler)</a>: Popular cross-platform assembler</li>
+  <li><a href="https://docs.microsoft.com/en-us/cpp/build/reference/linking?view=vs-2019">MSVC Linker (microsoft’s visual studio linker)</a>: Simple to use and made by Microsoft. An alternative would be GCC’s linker.</li>
+</ul>
+
+<h4 id="hello-world"><em>Hello world!</em></h4>
+
+<p>We are going to step through a classic helloworld program using NASM syntax. We will need to use a few functions from the winAPI, accessed through the <code class="language-plaintext highlighter-rouge">kernel32.dll</code> shared library that will need to be linked.</p>
+
+<p>The functions we will use are:</p>
+
+<ul>
+  <li><a href="https://docs.microsoft.com/en-us/windows/console/getstdhandle">GetStdHandle</a>: Get a handle to the console’s output</li>
+  <li><a href="https://docs.microsoft.com/en-us/windows/console/writeconsole">WriteConsoleA</a>: Write to the console using the standard out handle previously obtained</li>
+  <li><a href="https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess">ExitProcess</a>: Exit the process properly</li>
+</ul>
+
+<p>Here is the simple helloworld program in C, using those functions:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;windows.h&gt;
+</span>
+<span class="kt">char</span> <span class="n">buff_out</span><span class="p">[</span><span class="mi">20</span><span class="p">];</span> 
+
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">char</span> <span class="o">*</span><span class="n">msg</span> <span class="o">=</span> <span class="s">"hello world!"</span><span class="p">;</span>
+    <span class="kt">int</span> <span class="n">msglen</span> <span class="o">=</span> <span class="mi">12</span><span class="p">;</span>  
+    <span class="n">HANDLE</span> <span class="n">handle</span> <span class="o">=</span> <span class="n">GetStdHandle</span><span class="p">(</span><span class="n">STD_OUTPUT_HANDLE</span><span class="p">);</span>
+    <span class="n">WriteConsoleA</span><span class="p">(</span><span class="n">handle</span><span class="p">,</span> <span class="n">msg</span><span class="p">,</span> <span class="n">msglen</span><span class="p">,</span> <span class="n">buff_out</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+    <span class="n">ExitProcess</span><span class="p">(</span><span class="mi">0</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>Here you can see the arguments passed to each function. In assembly you will see that each of these arguments needs to be pushed onto the <strong><em>stack</em></strong> in a specific order. Windows defines a calling convention known as <em>stdcall</em> that we must follow for their functions to work correctly.</p>
+
+<p>“The stdcall calling convention is a variation on the Pascal calling convention in  which the callee is responsible for cleaning up the stack, but the  parameters are pushed onto the stack in right-to-left order, as in the  _cdecl calling convention” - <a href="https://en.wikipedia.org/wiki/X86_calling_conventions">more</a></p>
+
+<p>In assembly we will have to push arguments to functions onto the stack using the <code class="language-plaintext highlighter-rouge">push</code> and <code class="language-plaintext highlighter-rouge">pop</code> instructions. The stack is nothing more than an area of memory designated per program to hold things like local variables and arguments to functions.</p>
+
+<p>We will get back to dealing with the stack after setting up our assembly program:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="n">BITS</span> <span class="mi">32</span><span class="p">]</span>
+<span class="n">global</span> <span class="n">main</span>
+
+<span class="k">extern</span> <span class="n">_GetStdHandle</span><span class="err">@</span><span class="mi">4</span>          <span class="p">;</span> <span class="n">functions</span> <span class="n">from</span> <span class="n">kernel32</span><span class="p">.</span><span class="n">dll</span>
+<span class="k">extern</span> <span class="n">_WriteConsoleA</span><span class="err">@</span><span class="mi">20</span>
+<span class="k">extern</span> <span class="n">_ExitProcess</span><span class="err">@</span><span class="mi">4</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">data</span>					<span class="p">;</span> <span class="n">declaring</span> <span class="n">initialized</span> <span class="n">data</span>
+    <span class="n">msg</span><span class="o">:</span>     <span class="n">db</span> <span class="err">'</span><span class="n">hello</span> <span class="n">world</span><span class="o">!</span><span class="err">'</span><span class="p">,</span><span class="mh">0x0D</span><span class="p">,</span><span class="mh">0x0A</span> <span class="p">;</span> <span class="mh">0x0D</span><span class="p">,</span> <span class="mh">0x0A</span> <span class="n">is</span> <span class="n">the</span> <span class="n">carriage</span> <span class="k">return</span><span class="o">:</span> <span class="o">/</span><span class="n">r</span><span class="o">/</span><span class="n">n</span>
+    <span class="n">msglen</span><span class="o">:</span>  <span class="n">equ</span> <span class="err">$</span><span class="o">-</span><span class="n">msg</span>			<span class="p">;</span> <span class="err">$</span><span class="o">-</span><span class="n">msg</span> <span class="n">is</span> <span class="n">a</span> <span class="n">macro</span> <span class="k">for</span> <span class="n">finding</span> <span class="n">the</span> <span class="n">length</span> <span class="n">of</span> <span class="n">our</span> <span class="n">msg</span> <span class="n">var</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">bss</span>                    <span class="p">;</span> <span class="n">bss</span> <span class="n">section</span> <span class="n">used</span> <span class="k">for</span> <span class="n">uninitialized</span> <span class="n">data</span>
+    <span class="n">buff_out</span><span class="o">:</span>	<span class="n">resd</span> <span class="mi">1</span>     
+
+</code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">[BITS 32]</code> is just telling NASM we are creating a 32-bit application and <code class="language-plaintext highlighter-rouge">global main</code> is telling NASM where our program will start.</p>
+
+<p>We are using the <code class="language-plaintext highlighter-rouge">extern</code> keyword here to let the assembler know which functions from <code class="language-plaintext highlighter-rouge">kernel32.dll</code> we want to use in the program. By Windows convention the functions have an underscore before them and the number of bytes passed as arguments after a <code class="language-plaintext highlighter-rouge">@</code>.</p>
+
+<p>The assembler needs to distinguish between executable code and data in memory. Here we are declaring the same variables from our example written in C, just in specific sections designated for data. During execution, the program can retrieve and manipulate the data we have declared.</p>
+
+<p>Now lets begin by using <code class="language-plaintext highlighter-rouge">GetStdHandle</code> to get our handle to standard out:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">section</span> <span class="p">.</span><span class="n">text</span>
+    <span class="n">main</span><span class="o">:</span>
+        <span class="n">push</span>    <span class="n">dword</span> <span class="o">-</span><span class="mi">11</span>       <span class="p">;</span> <span class="n">push</span> <span class="n">STD_OUTPUT_HANDLE</span> <span class="p">(</span><span class="n">defined</span> <span class="n">as</span> <span class="o">-</span><span class="mi">11</span><span class="p">)</span> <span class="n">onto</span> <span class="n">the</span> <span class="n">stack</span>
+        <span class="n">call</span>    <span class="n">_GetStdHandle</span><span class="err">@</span><span class="mi">4</span> <span class="p">;</span> <span class="n">eax</span> <span class="n">now</span> <span class="n">hold</span> <span class="n">the</span> <span class="n">returned</span> <span class="n">handle</span>
+</code></pre></div></div>
+
+<p>Here you can see we are defining another section called <code class="language-plaintext highlighter-rouge">.text</code> which is where our executable code will go. We previously defined our program entry point as main. The words with colons after them such as <code class="language-plaintext highlighter-rouge">main:</code> are called labels and can be used to locate different parts of our code.</p>
+
+<p>Back to the stack: lets have a look at the definition of <a href="https://docs.microsoft.com/en-us/windows/console/getstdhandle">GetStdHandle</a>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">HANDLE</span> <span class="n">WINAPI</span> <span class="nf">GetStdHandle</span><span class="p">(</span>
+  <span class="n">_In_</span> <span class="n">DWORD</span> <span class="n">nStdHandle</span>
+<span class="p">);</span>
+</code></pre></div></div>
+
+<p>It takes one argument. From the documentation of the function the <code class="language-plaintext highlighter-rouge">nStdHandle</code> argument can either be -10 (input), -11 (output), or -12 (error). We want to print to the console so we want to <em>push</em> -11 onto the stack so that <code class="language-plaintext highlighter-rouge">GetStdHandle</code> can retrieve it and return a handle to the console output.</p>
+
+<p>By calling convention, the returned handle will be in the <code class="language-plaintext highlighter-rouge">eax</code> register which will come in handy when calling <a href="https://docs.microsoft.com/en-us/windows/console/writeconsole">WriteConsoleA</a>:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">push</span>    <span class="n">dword</span> <span class="mi">0</span>         <span class="p">;</span> <span class="n">arg</span> <span class="mi">5</span>
+<span class="n">push</span>    <span class="n">buff_out</span>        <span class="p">;</span> <span class="n">arg</span> <span class="mi">4</span>
+<span class="n">push</span>    <span class="n">dword</span> <span class="n">msglen</span>    <span class="p">;</span> <span class="n">arg</span> <span class="mi">3</span>
+<span class="n">push</span>    <span class="n">msg</span>            	<span class="p">;</span> <span class="n">arg</span> <span class="mi">2</span>
+<span class="n">push</span>    <span class="n">eax</span>             <span class="p">;</span> <span class="n">arg</span> <span class="mi">1</span>
+<span class="n">call</span>    <span class="n">_WriteConsoleA</span><span class="err">@</span><span class="mi">20</span>
+</code></pre></div></div>
+
+<p><a href="https://docs.microsoft.com/en-us/windows/console/writeconsole">WriteConsoleA</a> takes 5 arguments:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">BOOL</span> <span class="n">WINAPI</span> <span class="nf">WriteConsole</span><span class="p">(</span>
+  <span class="n">_In_</span>             <span class="n">HANDLE</span>  <span class="n">hConsoleOutput</span><span class="p">,</span>
+  <span class="n">_In_</span>       <span class="k">const</span> <span class="n">VOID</span>    <span class="o">*</span><span class="n">lpBuffer</span><span class="p">,</span>
+  <span class="n">_In_</span>             <span class="n">DWORD</span>   <span class="n">nNumberOfCharsToWrite</span><span class="p">,</span>
+  <span class="n">_Out_opt_</span>        <span class="n">LPDWORD</span> <span class="n">lpNumberOfCharsWritten</span><span class="p">,</span>
+  <span class="n">_Reserved_</span>       <span class="n">LPVOID</span>  <span class="n">lpReserved</span>
+<span class="p">);</span>
+</code></pre></div></div>
+
+<p>By calling convention, arguments are pushed onto the stack from right to left. So first <code class="language-plaintext highlighter-rouge">lpreserved</code> is pushed which, according to the documentation, can be ignored and just set to 0. Then <code class="language-plaintext highlighter-rouge">lpNumberOfCharsWritten</code> is pushed and so on.</p>
+
+<p>Putting these parts together and adding <a href="https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-exitprocess">ExitProcess</a> gives us a complete program, ready to be assembled:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="n">BITS</span> <span class="mi">32</span><span class="p">]</span>
+<span class="n">global</span> <span class="n">main</span>
+
+<span class="k">extern</span> <span class="n">_GetStdHandle</span><span class="err">@</span><span class="mi">4</span>          <span class="p">;</span> <span class="n">functions</span> <span class="n">from</span> <span class="n">kernel32</span><span class="p">.</span><span class="n">dll</span>
+<span class="k">extern</span> <span class="n">_WriteConsoleA</span><span class="err">@</span><span class="mi">20</span>
+<span class="k">extern</span> <span class="n">_ExitProcess</span><span class="err">@</span><span class="mi">4</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">data</span>
+    <span class="n">msg</span><span class="o">:</span>     <span class="n">db</span> <span class="err">'</span><span class="n">hello</span> <span class="n">world</span><span class="o">!</span><span class="err">'</span><span class="p">,</span><span class="mh">0x0</span><span class="p">,</span><span class="mh">0x0D</span><span class="p">,</span><span class="mh">0x0A</span>
+    <span class="n">msglen</span><span class="o">:</span>  <span class="n">equ</span> <span class="err">$</span><span class="o">-</span><span class="n">msg</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">bss</span>                    <span class="p">;</span> <span class="n">bss</span> <span class="n">section</span> <span class="n">used</span> <span class="k">for</span> <span class="n">uninitialized</span> <span class="n">data</span>
+    <span class="n">buff_out</span><span class="o">:</span>	<span class="n">resd</span> <span class="mi">1</span>     
+
+<span class="n">section</span> <span class="p">.</span><span class="n">text</span>
+    <span class="n">main</span><span class="o">:</span>
+        <span class="n">push</span>    <span class="n">dword</span> <span class="o">-</span><span class="mi">11</span>       <span class="p">;</span> <span class="n">push</span> <span class="n">STD_OUTPUT_HANDLE</span> <span class="p">(</span><span class="n">defined</span> <span class="n">as</span> <span class="o">-</span><span class="mi">11</span><span class="p">)</span> <span class="n">onto</span> <span class="n">the</span> <span class="n">stack</span>
+        <span class="n">call</span>    <span class="n">_GetStdHandle</span><span class="err">@</span><span class="mi">4</span> <span class="p">;</span> <span class="n">eax</span> <span class="n">now</span> <span class="n">hold</span> <span class="n">the</span> <span class="n">returned</span> <span class="n">handle</span>
+
+        <span class="n">push</span>    <span class="n">dword</span> <span class="mi">0</span>                      
+        <span class="n">push</span>    <span class="n">buff_out</span>        
+        <span class="n">push</span>    <span class="n">dword</span> <span class="n">msglen</span>    
+        <span class="n">push</span>    <span class="n">msg</span>             
+        <span class="n">push</span>    <span class="n">eax</span>             
+        <span class="n">call</span>    <span class="n">_WriteConsoleA</span><span class="err">@</span><span class="mi">20</span>
+
+        <span class="n">push</span>    <span class="n">dword</span> <span class="mi">0</span>         <span class="p">;</span> <span class="n">arg</span> <span class="mi">1</span><span class="o">:</span> <span class="mi">0</span> <span class="n">indicating</span> <span class="n">the</span> <span class="k">return</span> <span class="n">value</span>
+        <span class="n">call</span>    <span class="n">_ExitProcess</span><span class="err">@</span><span class="mi">4</span>
+</code></pre></div></div>
+
+<p>Lets build it!</p>
+
+<p>To assemble with NASM first save the file as something like myfile.asm and then run the command:</p>
+
+<p><code class="language-plaintext highlighter-rouge">nasm.exe -fwin32 helloworld.asm</code></p>
+
+<p>This will output an object file: <code class="language-plaintext highlighter-rouge">helloworld.obj</code> that will need to be linked with <code class="language-plaintext highlighter-rouge">kernel32.dll</code>. To use Microsoft’s linker you will need to install developer tools <a href="https://docs.microsoft.com/en-us/cpp/build/building-on-the-command-line?view=vs-2019">here</a>. This can be quite a lengthy read but its useful to use native tools provided by Windows to produce native applications as there are less complications.</p>
+
+<p><code class="language-plaintext highlighter-rouge">link helloworld.obj /entry:main /defaultlib:kernel32.lib</code></p>
+
+<p>/entry defines where executable code starts and /defaultlib is linking the <code class="language-plaintext highlighter-rouge">kernel32.dll</code> shared library. Learn more about the linker <a href="https://docs.microsoft.com/en-us/cpp/build/reference/linker-options?view=vs-2019">here</a>.</p>
+
+<h4 id="hello-world-part-2"><em>Hello world part 2?!</em></h4>
+
+<p>Using the above hello world program, see if you can create, assemble, and link a similar program that prints “hello world” in a pop up message box rather than to the console.</p>
+
+<p>Hint: use the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messagebox">MessageBox</a> function, it doesn’t even need a handle to standard out, how nice! Note: windows functions come with ‘A’ or ‘W’ appended (use MessageBoxA here), read about why <a href="https://renenyffenegger.ch/notes/Windows/development/WinAPI/A-and-W-functions">here</a>.</p>
+
+<p>Hint: there won’t be any initialized data so no need for a .bss section just a .data and .text section.</p>
+
+<p>Hint: you will need to link another library in addition to <code class="language-plaintext highlighter-rouge">kernel32.dll</code></p>
+
+<p>Below is the code:</p>
+
+<p>-</p>
+
+<p>-</p>
+
+<p>-</p>
+
+<p>-</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[</span><span class="n">BITS</span> <span class="mi">32</span><span class="p">]</span>
+<span class="n">global</span> <span class="n">main</span>
+
+<span class="k">extern</span> <span class="n">_MessageBoxA</span><span class="err">@</span><span class="mi">16</span>
+<span class="k">extern</span> <span class="n">_ExitProcess</span><span class="err">@</span><span class="mi">4</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">data</span>
+    <span class="n">msg_display</span><span class="o">:</span> <span class="n">db</span> <span class="err">'</span><span class="n">hello</span> <span class="n">world</span><span class="o">!</span><span class="err">'</span><span class="p">,</span> <span class="mh">0x0</span><span class="p">,</span> <span class="mh">0x0D</span><span class="p">,</span> <span class="mh">0x0A</span>
+    <span class="n">msg_title</span><span class="o">:</span> <span class="n">db</span> <span class="err">'</span><span class="n">Message</span><span class="err">'</span><span class="p">,</span> <span class="mh">0x0</span>
+
+<span class="n">section</span> <span class="p">.</span><span class="n">text</span>
+    <span class="n">main</span><span class="o">:</span> 
+        <span class="n">push</span> <span class="n">dword</span> <span class="mh">0x00000030</span>
+        <span class="n">push</span> <span class="n">msg_title</span>
+        <span class="n">push</span> <span class="n">msg_display</span>
+        <span class="n">push</span> <span class="n">dword</span> <span class="mi">0</span>            
+        <span class="n">call</span> <span class="n">_MessageBoxA</span><span class="err">@</span><span class="mi">16</span>
+
+        <span class="n">push</span>    <span class="n">dword</span> <span class="mi">0</span>         
+        <span class="n">call</span>    <span class="n">_ExitProcess</span><span class="err">@</span><span class="mi">4</span>
+</code></pre></div></div>
+
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2020-06-04T00:00:00-04:00">June 4, 2020</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Share on</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?text=Learning+x86+with+the+winAPI%20http%3A%2F%2Flocalhost%3A4000%2FLearning-x86-with-the-winAPI%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2FLearning-x86-with-the-winAPI%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2FLearning-x86-with-the-winAPI%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">You may also enjoy</h4>
+      <div class="grid__wrapper">
+        
+          
+            
+      </div>
+    </div>
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Follow:</strong></li>
+    
+
+    
+      
+        
+      
+        
+      
+        
+          <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2020 jayo78. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+  <script src="https://kit.fontawesome.com/4eee35f757.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
