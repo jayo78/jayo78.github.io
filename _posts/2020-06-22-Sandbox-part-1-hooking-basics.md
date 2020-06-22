@@ -1,7 +1,7 @@
 ---
 layout: single
-title: Sandbox part 1: hooking basics
-date: 2020-22-04
+title: Sandbox part 1: basic hooking
+date: 2020-06-22
 classes: wide
 ---
 
