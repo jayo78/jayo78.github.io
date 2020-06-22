@@ -57,7 +57,7 @@ The `jmp` instruction is a relative jump to an offset starting from the next ins
 
 Lets first get the address of MessageBoxA in memory.
 
-```C++
+```c++
 // 1. get memory address of the MessageBoxA function from user32.dll 
 hinstLib= LoadLibraryA(TEXT("user32.dll"));
 function_address= GetProcAddress(hinstLib, "MessageBoxA");
