@@ -45,7 +45,7 @@ I will cover injection in part 2 so stay tuned. First lets understand hooks.
 
 We will be hooking the [MessageBoxA](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxa) function by replacing its first 5 bytes with a `jmp` instruction to our own function. The MessageBoxA function simply displays a pop up text box with a title and dialog. By hooking it we will be able to intercept calls and alter the arguments.
 
- ![mbox_prolog]/assets/images/mbox_prolog.PNG)
+ ![mbox_prolog](/assets/images/mbox_prolog.PNG)
 
 Here I have disassembled `user32.dll` and found the function we would like to hook. The highlighted 5 bytes correspond to the assembly instructions directly to the right. This set of instructions is a fairly typical prologue found in many API functions.
 
@@ -107,7 +107,7 @@ void install_hook()
     relative_offset= (DWORD *)(dst-src); 
 
     memcpy(patch, 1, "\xE9", 1);
-	memcpy(patch + 1, 4, &relative_offset, 4);
+    memcpy(patch + 1, 4, &relative_offset, 4);
 
     WriteProcessMemory(GetCurrentProcess(), (LPVOID)function_address, patch, 5, NULL);
 }
@@ -180,7 +180,7 @@ void install_hook()
     relative_offset= (DWORD *)(dst-src); 
 
     memcpy(patch, "\xE9", 1);
-	memcpy(patch + 1, &relative_offset, 4);
+    memcpy(patch + 1, &relative_offset, 4);
 
     WriteProcessMemory(GetCurrentProcess(), (LPVOID)function_address, patch, 5, NULL);
 
