@@ -1,0 +1,687 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.19.2 by Michael Rose
+  Copyright 2013-2019 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Sandbox part 1 - basic hooking -</title>
+<meta name="description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+
+
+  <meta name="author" content="Jayson Hurst">
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="">
+<meta property="og:title" content="Sandbox part 1 - basic hooking">
+<meta property="og:url" content="http://localhost:4000/Sandbox-part-1-hooking-basics/">
+
+
+  <meta property="og:description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2020-06-22T00:00:00-04:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/Sandbox-part-1-hooking-basics/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "jayo78",
+      "url": "http://localhost:4000/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title=" Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.png" alt=""></a>
+        
+        <a class="site-title" href="/">
+          jayo78
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Home</a>
+            </li><li class="masthead__menu-item">
+              <a href="/year-archive/">Posts</a>
+            </li><li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="http://localhost:4000/" itemprop="item"><span itemprop="name">Home</span></a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">Sandbox part 1 - basic hooking</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/avatar.jpg" alt="Jayson Hurst" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jayson Hurst</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Aspiring security researcher<br />Student at UMD</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">Philadelphia, PA</span>
+        </li>
+      
+
+      
+        
+          
+            <li><a href="https://www.linkedin.com/in/jayo78" rel="nofollow noopener noreferrer"><i class="fas fa-fw fa-link" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+      
+
+      
+
+      
+        <li>
+          <a href="mailto:jhurst1@terpmail.umd.edu">
+            <meta itemprop="email" content="jhurst1@terpmail.umd.edu" />
+            <i class="fas fa-fw fa-envelope-square" aria-hidden="true"></i><span class="label">Email</span>
+          </a>
+        </li>
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Sandbox part 1 - basic hooking">
+    <meta itemprop="description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+    <meta itemprop="datePublished" content="2020-06-22T00:00:00-04:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Sandbox part 1 - basic hooking
+</h1>
+          
+            <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  8 minute read
+
+</p>
+          
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.</p>
+
+<h4 id="prerequisites-and-resources">Prerequisites and Resources</h4>
+
+<p>You will need to understand:</p>
+
+<ul>
+  <li><a href="https://support.microsoft.com/en-us/help/815065/what-is-a-dll">DLLs</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/procthread/processes-and-threads">Windows processes and threads</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/debug/pe-format">PE file format</a></li>
+  <li>C/C++, basic x86, debugging</li>
+</ul>
+
+<p>Resources I used:</p>
+
+<ul>
+  <li><a href="http://www.binaryguard.com/bgc/malware/sandbox/2015/11/09/dissecting_inline_hooks.html">dissecting inline hooks</a></li>
+  <li><a href="http://jbremer.org/x86-api-hooking-demystified/">x86 api hooking demystified</a></li>
+  <li><a href="https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html">inline hooking for programmers</a></li>
+</ul>
+
+<h4 id="so-what-is-a-sandbox">So what is a sandbox?</h4>
+
+<p>A sandbox is designed to examine the behavior of an executable and is largely used in Cybersecurity solutions for analyzing malware. There are a few open source projects like <a href="https://cuckoosandbox.org/">Cuckoo</a>.</p>
+
+<p>The idea is to run a program in a controlled environment to see what it attempts to do. A native executable will need to reach out to the host operating system in order to have any functionality. For example, it might need to manipulate a file using the I/O functions or use sockets to connect to remote servers. In order to intercept these calls to the operating system, a userland sandbox will need to sit in the middle of this communication.</p>
+
+<p>We will be building a sandbox for Windows executables, which have the PE file <a href="https://docs.microsoft.com/en-us/windows/win32/debug/pe-format">format</a>. The Windows API (win32 API) allows for userland programs to interact with the Windows OS by providing functions in shared libraries called <em>Dynamically Linked Libraries</em>. The sandbox will need to monitor these functions.</p>
+
+<p><img src="/assets/images/Sandbox.PNG" alt="Sandbox" class="align-center" /></p>
+
+<p>Since every process essentially has their very own copy of Windows DLLs needed to execute, our sandbox will need to be injected into the executable’s process that we want to examine. Once injected the sandbox can insert changes known as <em>hooks</em> into the imported DLL functions that will now be used by the executable.</p>
+
+<p><strong>How it works:</strong></p>
+
+<ol>
+  <li>Attach to a process, and inject our own DLL (Part 2)</li>
+  <li>Hook Windows API functions from within the injected process (Part 1, <em>you are here</em>)</li>
+  <li>Intercept and monitor API calls</li>
+  <li>profit???</li>
+</ol>
+
+<p>I will cover injection in part 2 so stay tuned. First lets understand hooks.</p>
+
+<h4 id="the-classic-5-byte-hook">The classic 5 byte hook</h4>
+
+<p>We will be hooking the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxa">MessageBoxA</a> function by replacing its first 5 bytes with a <code class="language-plaintext highlighter-rouge">jmp</code> instruction to our own function. The MessageBoxA function simply displays a pop up text box with a title and dialog. By hooking it we will be able to intercept calls and alter the arguments.</p>
+
+<p><img src="/assets/images/mbox_prolog.PNG" alt="mbox_prolog" class="align-center" /></p>
+
+<p>Here I have disassembled <code class="language-plaintext highlighter-rouge">user32.dll</code> and found the function we would like to hook. The highlighted 5 bytes correspond to the assembly instructions directly to the right. This set of instructions is a fairly typical prologue found in many API functions.</p>
+
+<p>By overwriting these first 5 bytes with a <code class="language-plaintext highlighter-rouge">jmp</code> instruction, we are redirecting execution to our own defined function. We will save the original bytes so that they can be referenced later when we want to pass execution back to the hooked function.</p>
+
+<p>The <code class="language-plaintext highlighter-rouge">jmp</code> instruction is a relative jump to an offset starting from the next instruction’s address. The corresponding <code class="language-plaintext highlighter-rouge">jmp</code> opcode is <code class="language-plaintext highlighter-rouge">E9</code> and it takes a 4 byte offset that we will need to calculate.</p>
+
+<p><img src="/assets/images/5bytehook.PNG" alt="mbox_prolog" class="align-center" /></p>
+
+<p>Lets first get the address of MessageBoxA in memory.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 1. get memory address of the MessageBoxA function from user32.dll </span>
+<span class="n">hinstLib</span><span class="o">=</span> <span class="n">LoadLibraryA</span><span class="p">(</span><span class="n">TEXT</span><span class="p">(</span><span class="s">"user32.dll"</span><span class="p">));</span>
+<span class="n">function_address</span><span class="o">=</span> <span class="n">GetProcAddress</span><span class="p">(</span><span class="n">hinstLib</span><span class="p">,</span> <span class="s">"MessageBoxA"</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>We are using a technique called dynamic linking where we load the DLL that contains the function we want, using <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibrarya">LoadLibraryA</a>. Then <a href="https://docs.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-getprocaddress">GetProcAddress</a> will give us the address of the function in memory. We can now save the first 5 bytes at the address we found into a buffer using <a href="https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-readprocessmemory">ReadProcessMemory</a>.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// 2. save the first 5 bytes into saved_buffer</span>
+<span class="n">ReadProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="n">function_address</span><span class="p">,</span> <span class="n">saved_buffer</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Before we write our patch in, we need to calculate the offset (distance) from MessageBoxA to a proxy function that we will write in a sec. The <code class="language-plaintext highlighter-rouge">jmp &lt;offset&gt;</code> instruction will essentially move the instruction pointer (EIP) past the current instruction (5 bytes) and then add the offset: <code class="language-plaintext highlighter-rouge">eip = eip + 5 + offset</code></p>
+
+<p>Find the offset: <code class="language-plaintext highlighter-rouge">offset = &lt;destination address&gt; - (&lt;source address&gt; + 5)</code></p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">proxy_address</span><span class="o">=</span> <span class="o">&amp;</span><span class="n">proxy_function</span><span class="p">;</span>
+<span class="n">src</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">function_address</span> <span class="o">+</span> <span class="mi">5</span><span class="p">;</span> 
+<span class="n">dst</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">proxy_address</span><span class="p">;</span>
+<span class="n">relative_offset</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span> <span class="o">*</span><span class="p">)(</span><span class="n">dst</span><span class="o">-</span><span class="n">src</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>Here is the complete implementation which then writes the patch to MessageBoxA in memory</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">install_hook</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">HINSTANCE</span> <span class="n">hinstLib</span><span class="p">;</span>
+    <span class="n">VOID</span> <span class="o">*</span><span class="n">proxy_address</span><span class="p">;</span>
+    <span class="n">DWORD</span> <span class="o">*</span><span class="n">relative_offset</span><span class="p">;</span>
+    <span class="n">DWORD</span> <span class="n">src</span><span class="p">;</span> 
+    <span class="n">DWORD</span> <span class="n">dst</span><span class="p">;</span>
+    <span class="n">CHAR</span> <span class="n">patch</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+
+    <span class="c1">// 1. get memory address of the MessageBoxA function from user32.dll </span>
+    <span class="n">hinstLib</span><span class="o">=</span> <span class="n">LoadLibraryA</span><span class="p">(</span><span class="n">TEXT</span><span class="p">(</span><span class="s">"user32.dll"</span><span class="p">));</span>
+    <span class="n">function_address</span><span class="o">=</span> <span class="n">GetProcAddress</span><span class="p">(</span><span class="n">hinstLib</span><span class="p">,</span> <span class="s">"MessageBoxA"</span><span class="p">);</span>
+
+    <span class="c1">// 2. save the first 5 bytes into saved_buffer</span>
+    <span class="n">ReadProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="n">function_address</span><span class="p">,</span> <span class="n">saved_buffer</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="c1">// 3. overwrite the first 5 bytes with a call to proxy_function</span>
+    <span class="n">proxy_address</span><span class="o">=</span> <span class="o">&amp;</span><span class="n">proxy_function</span><span class="p">;</span>
+    <span class="n">src</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">function_address</span> <span class="o">+</span> <span class="mi">5</span><span class="p">;</span> 
+    <span class="n">dst</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">proxy_address</span><span class="p">;</span>
+    <span class="n">relative_offset</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span> <span class="o">*</span><span class="p">)(</span><span class="n">dst</span><span class="o">-</span><span class="n">src</span><span class="p">);</span> 
+
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">patch</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="s">"</span><span class="se">\xE9</span><span class="s">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">patch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">relative_offset</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+    <span class="n">WriteProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="p">(</span><span class="n">LPVOID</span><span class="p">)</span><span class="n">function_address</span><span class="p">,</span> <span class="n">patch</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p><em>*Quick note: WriteProcessMemory and ReadProcessMemory query the protections on the memory they are accessing and alter them accordingly. They really want you to succeed :)</em></p>
+
+<p>The proxy function that we redirect execution to will need to accept the same parameters, have the same calling convention, and return the same type that MessageBoxA does.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// The proxy function we will jump to after the hook has been installed</span>
+<span class="kt">int</span> <span class="kr">__stdcall</span> <span class="n">proxy_function</span><span class="p">(</span><span class="n">HWND</span> <span class="n">hWnd</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpText</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpCaption</span><span class="p">,</span> <span class="n">UINT</span> <span class="n">uType</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Now we can print out the parameters meant for MessageBoxA, alter them, and then continue to the real MessageBoxA. If we just call MessageBoxA we will run into the hook again causing infinite recursion and a stack overflow. To prevent this we will first replace the bytes we overwrote with the original ones that were previously saved into a buffer.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// The proxy function we will jump to after the hook has been installed</span>
+<span class="kt">int</span> <span class="kr">__stdcall</span> <span class="nf">proxy_function</span><span class="p">(</span><span class="n">HWND</span> <span class="n">hWnd</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpText</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpCaption</span><span class="p">,</span> <span class="n">UINT</span> <span class="n">uType</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Hello from MessageBox!</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Text: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">LPCSTR</span><span class="p">)</span><span class="n">lpText</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">Caption: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">LPCSTR</span><span class="p">)</span><span class="n">lpCaption</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+
+    <span class="c1">// unhook the function (re-write the saved buffer) to prevent infinite recursion</span>
+    <span class="n">WriteProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="p">(</span><span class="n">LPVOID</span><span class="p">)</span><span class="n">hooked_address</span><span class="p">,</span> <span class="n">saved_buffer</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="c1">// return to the original function and modify the intended parameters</span>
+    <span class="k">return</span> <span class="n">MessageBoxA</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="s">"yeet"</span><span class="p">,</span> <span class="s">"yeet"</span><span class="p">,</span> <span class="n">uType</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>This hook will only effect a call to MessageBoxA from within the same program. To tamper with another processes functions from imported DLLs would require injection, which will be covered in the next part. View this example on <a href="https://github.com/jayo78/basic-hooking/blob/master/hook_v1.cpp">github</a>.</p>
+
+<p>Since the proxy function re-writes the original bytes, which unhooks the function, we would need to continually hook MessageBoxA to intercept subsequent calls. Lets talk trampolines.</p>
+
+<h4 id="trampolines">Trampolines</h4>
+
+<p>We can use a trampoline function to keep our hook intact while not causing infinite recursion. The trampoline’s job is to execute the original bytes from function that we hooked and then jump past the installed hook. We can call it from the proxy function.</p>
+
+<p><img src="/assets/images/trampoline.PNG" alt="mbox_prolog" class="align-center" /></p>
+
+<p>By jumping 5 bytes past the original function’s address we are not executing the relative <code class="language-plaintext highlighter-rouge">jmp</code> to the proxy function, by passing the installed hook.</p>
+
+<p>We are pushing the address of the hooked function + 5 and then using <code class="language-plaintext highlighter-rouge">ret</code> to jump to that address. These two instructions, which use a 4 byte address, total to 6 bytes. Our trampoline then will be 11 bytes. Lets build the trampoline by adding to the <code class="language-plaintext highlighter-rouge">install_hook()</code> function we already wrote.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">install_hook</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">HINSTANCE</span> <span class="n">hinstLib</span><span class="p">;</span>
+    <span class="n">VOID</span> <span class="o">*</span><span class="n">proxy_address</span><span class="p">;</span>
+    <span class="n">DWORD</span> <span class="o">*</span><span class="n">relative_offset</span><span class="p">;</span>
+    <span class="n">DWORD</span> <span class="o">*</span><span class="n">hook_address</span><span class="p">;</span>
+    <span class="n">DWORD</span> <span class="n">src</span><span class="p">;</span> 
+    <span class="n">DWORD</span> <span class="n">dst</span><span class="p">;</span>
+    <span class="n">CHAR</span> <span class="n">patch</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span><span class="o">=</span> <span class="p">{</span><span class="mi">0</span><span class="p">};</span>
+    <span class="kt">char</span> <span class="n">saved_buffer</span><span class="p">[</span><span class="mi">5</span><span class="p">];</span> <span class="c1">// buffer to save the original bytes</span>
+    <span class="n">FARPROC</span> <span class="n">function_address</span><span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+
+    <span class="c1">// 1. get memory address of the MessageBoxA function from user32.dll </span>
+    <span class="n">hinstLib</span><span class="o">=</span> <span class="n">LoadLibraryA</span><span class="p">(</span><span class="n">TEXT</span><span class="p">(</span><span class="s">"user32.dll"</span><span class="p">));</span>
+    <span class="n">function_address</span><span class="o">=</span> <span class="n">GetProcAddress</span><span class="p">(</span><span class="n">hinstLib</span><span class="p">,</span> <span class="s">"MessageBoxA"</span><span class="p">);</span>
+
+    <span class="c1">// 2. save the first 5 bytes into saved_buffer</span>
+    <span class="n">ReadProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="n">function_address</span><span class="p">,</span> <span class="n">saved_buffer</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="c1">// 3. overwrite the first 5 bytes with a jump to proxy_function</span>
+    <span class="n">proxy_address</span><span class="o">=</span> <span class="o">&amp;</span><span class="n">proxy_function</span><span class="p">;</span>
+    <span class="n">src</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">function_address</span> <span class="o">+</span> <span class="mi">5</span><span class="p">;</span> 
+    <span class="n">dst</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="n">proxy_address</span><span class="p">;</span>
+    <span class="n">relative_offset</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span> <span class="o">*</span><span class="p">)(</span><span class="n">dst</span><span class="o">-</span><span class="n">src</span><span class="p">);</span> 
+
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">patch</span><span class="p">,</span> <span class="s">"</span><span class="se">\xE9</span><span class="s">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">(</span><span class="n">patch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">relative_offset</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+
+    <span class="n">WriteProcessMemory</span><span class="p">(</span><span class="n">GetCurrentProcess</span><span class="p">(),</span> <span class="p">(</span><span class="n">LPVOID</span><span class="p">)</span><span class="n">function_address</span><span class="p">,</span> <span class="n">patch</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="nb">NULL</span><span class="p">);</span>
+
+    <span class="c1">// 4. Build the trampoline</span>
+    <span class="n">trampoline_address</span><span class="o">=</span> <span class="n">VirtualAlloc</span><span class="p">(</span><span class="nb">NULL</span><span class="p">,</span> <span class="mi">11</span><span class="p">,</span> <span class="n">MEM_COMMIT</span><span class="p">,</span> <span class="n">PAGE_EXECUTE_READWRITE</span><span class="p">);</span>
+    <span class="n">hook_address</span><span class="o">=</span> <span class="p">(</span><span class="n">DWORD</span> <span class="o">*</span><span class="p">)((</span><span class="n">DWORD</span><span class="p">)</span><span class="n">function_address</span> <span class="o">+</span> <span class="mi">5</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">((</span><span class="n">BYTE</span> <span class="o">*</span><span class="p">)</span><span class="n">trampoline_address</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">saved_buffer</span><span class="p">,</span> <span class="mi">5</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">((</span><span class="n">BYTE</span> <span class="o">*</span><span class="p">)</span><span class="n">trampoline_address</span> <span class="o">+</span> <span class="mi">5</span><span class="p">,</span> <span class="s">"</span><span class="se">\x68</span><span class="s">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">((</span><span class="n">BYTE</span> <span class="o">*</span><span class="p">)</span><span class="n">trampoline_address</span> <span class="o">+</span> <span class="mi">6</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">hook_address</span><span class="p">,</span> <span class="mi">4</span><span class="p">);</span>
+    <span class="n">memcpy</span><span class="p">((</span><span class="n">BYTE</span> <span class="o">*</span><span class="p">)</span><span class="n">trampoline_address</span> <span class="o">+</span> <span class="mi">10</span><span class="p">,</span> <span class="s">"</span><span class="se">\xC3</span><span class="s">"</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>We first call <a href="https://docs.microsoft.com/en-us/windows/win32/api/memoryapi/nf-memoryapi-virtualalloc">VirtualAlloc</a> to allocate 11 bytes of memory. We need to specify the protection of this memory location as executable, readable, and writable. This will allow us to edit the allocated bytes and then later execute them. After writing the trampoline to memory we can call it from the proxy function. Here is a function definition that we can call after assigning it to a memory location. It has the same parameters as MessageBoxA.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">typedef</span> 
+<span class="nf">int</span> <span class="p">(</span><span class="n">WINAPI</span> <span class="o">*</span><span class="n">defTrampolineFunc</span><span class="p">)(</span><span class="n">HWND</span> <span class="n">hWnd</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpText</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpCaption</span><span class="p">,</span> <span class="n">UINT</span> <span class="n">uType</span><span class="p">);</span>
+
+</code></pre></div></div>
+
+<p>Using the above definition, the proxy function can now call the previously allocated trampoline code.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// The proxy function we will jump to after the hook has been installed</span>
+<span class="kt">int</span> <span class="kr">__stdcall</span> <span class="nf">proxy_function</span><span class="p">(</span><span class="n">HWND</span> <span class="n">hWnd</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpText</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpCaption</span><span class="p">,</span> <span class="n">UINT</span> <span class="n">uType</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"----------intercepted call to MessageBoxA----------</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">cout</span> <span class="o">&lt;&lt;</span> <span class="s">"Text: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">LPCSTR</span><span class="p">)</span><span class="n">lpText</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">Caption: "</span> <span class="o">&lt;&lt;</span> <span class="p">(</span><span class="n">LPCSTR</span><span class="p">)</span><span class="n">lpCaption</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+
+    <span class="c1">// pass to the trampoline with altered arguments which will then return to MessageBoxA</span>
+    <span class="n">defTrampolineFunc</span> <span class="n">trampoline</span><span class="o">=</span> <span class="p">(</span><span class="n">defTrampolineFunc</span><span class="p">)</span><span class="n">trampoline_address</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">trampoline</span><span class="p">(</span><span class="n">hWnd</span><span class="p">,</span> <span class="s">"yeet"</span><span class="p">,</span> <span class="s">"yeet"</span><span class="p">,</span> <span class="n">uType</span><span class="p">);</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>View the full example on <a href="https://github.com/jayo78/basic-hooking/blob/master/hook_v2.cpp">github</a>.</p>
+
+<h4 id="conclusion">Conclusion</h4>
+
+<p>We covered a simple 5 byte - relative jump hook that should have given you a taste of what hooks are and how they can be useful. There are many ways to implement hooks, some more complicated than others. Please see <a href="http://jbremer.org/x86-api-hooking-demystified/">here</a> for more hooking examples.</p>
+
+<p>The sandbox that were building will need to hook many functions. Since this can quickly get quite tedious due to the fact that each target function is different, we will need a hooking engine. A hooking engine will be able to hook any function given to it utilizing an internal disassembler - see <a href="https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html">here</a>. Its important to understand the fundamentals of implementing your own hooks, but for our sandbox we will be using a hooking library.</p>
+
+<p>In the next part we will be going over process injection, where we will be hooking some simple malware to analyze what its doing. The code referenced in this post can be found <a href="https://github.com/jayo78/basic-hooking">here</a>. Thanks for reading! part 2 coming.</p>
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2020-06-22T00:00:00-04:00">June 22, 2020</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Share on</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?text=Sandbox+part+1+-+basic+hooking%20http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/Learning-x86-with-the-winAPI/" class="pagination--pager" title="Learning x86 with the winAPI
+">Previous</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Next</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">You may also enjoy</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Learning-x86-with-the-winAPI/" rel="permalink">Learning x86 with the winAPI
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  8 minute read
+
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” p...</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Follow:</strong></li>
+    
+
+    
+      
+        
+      
+        
+      
+        
+          <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2020 jayo78. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+  <script src="https://kit.fontawesome.com/4eee35f757.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>
