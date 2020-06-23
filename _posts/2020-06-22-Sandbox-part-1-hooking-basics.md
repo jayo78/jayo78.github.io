@@ -1,9 +1,10 @@
 ---
 layout: single
-title: Sandbox part 1: hooking basics
-date: 2020-22-04
+title: Sandbox part 1 - basic hooking
+date: 2020-06-22
 classes: wide
 ---
+
 
 In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.
 
