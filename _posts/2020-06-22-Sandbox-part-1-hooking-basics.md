@@ -29,7 +29,7 @@ The idea is to run a program in a controlled environment to see what it attempts
 
 We will be building a sandbox for Windows executables, which have the PE file [format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format). The Windows API (win32 API) allows for userland programs to interact with the Windows OS by providing functions in shared libraries called *Dynamically Linked Libraries*. The sandbox will need to monitor these functions.
 
-![Sandbox](/assets/images/Sandbox.PNG){: .align-center}
+![Sandbox](../assets/images/SandboxPart1/Sandbox.PNG){: .align-center}
 
 Since every process essentially has their very own copy of Windows DLLs needed to execute, our sandbox will need to be injected into the executable's process that we want to examine. Once injected the sandbox can insert changes known as *hooks* into the imported DLL functions that will now be used by the executable. 
 
@@ -46,7 +46,7 @@ I will cover injection in part 2 so stay tuned. First lets understand hooks.
 
 We will be hooking the [MessageBoxA](https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxa) function by replacing its first 5 bytes with a `jmp` instruction to our own function. The MessageBoxA function simply displays a pop up text box with a title and dialog. By hooking it we will be able to intercept calls and alter the arguments.
 
- ![mbox_prolog](/assets/images/mbox_prolog.PNG){: .align-center}
+ ![mbox_prolog](../assets/images/SandboxPart1/mbox_prolog.PNG){: .align-center}
 
 Here I have disassembled `user32.dll` and found the function we would like to hook. The highlighted 5 bytes correspond to the assembly instructions directly to the right. This set of instructions is a fairly typical prologue found in many API functions.
 
@@ -54,7 +54,7 @@ By overwriting these first 5 bytes with a `jmp` instruction, we are redirecting 
 
 The `jmp` instruction is a relative jump to an offset starting from the next instruction's address. The corresponding `jmp` opcode is `E9` and it takes a 4 byte offset that we will need to calculate. 
 
- ![mbox_prolog](/assets/images/5bytehook.PNG){: .align-center}
+ ![mbox_prolog](../assets/images/SandboxPart1/5bytehook.PNG){: .align-center}
 
 Lets first get the address of MessageBoxA in memory.
 
@@ -148,7 +148,7 @@ Since the proxy function re-writes the original bytes, which unhooks the functio
 
 We can use a trampoline function to keep our hook intact while not causing infinite recursion. The trampoline's job is to execute the original bytes from function that we hooked and then jump past the installed hook. We can call it from the proxy function.
 
- ![mbox_prolog](/assets/images/trampoline.PNG){: .align-center}
+ ![mbox_prolog](../assets/images/SandboxPart1/trampoline.PNG){: .align-center}
 
 By jumping 5 bytes past the original function's address we are not executing the relative `jmp` to the proxy function, by passing the installed hook. 
 
@@ -224,6 +224,6 @@ View the full example on [github](https://github.com/jayo78/basic-hooking/blob/m
 
 We covered a simple 5 byte - relative jump hook that should have given you a taste of what hooks are and how they can be useful. There are many ways to implement hooks, some more complicated than others. Please see [here](http://jbremer.org/x86-api-hooking-demystified/) for more hooking examples. 
 
-The sandbox that were building will need to hook many functions. Since this can quickly get quite tedious due to the fact that each target function is different, we will need a hooking engine. A hooking engine will be able to hook any function given to it utilizing an internal disassembler - see [here](https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html). Its important to understand the fundamentals of implementing your own hooks, but for our sandbox we will be using a hooking library.
+The sandbox that were building will need to hook many functions. Since this can quickly get quite tedious due to the fact that each target function is different, we will need a hooking engine. A hooking engine will be able to hook any function given to it utilizing an internal disassembler - see [here](https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html). 
 
-In the next part we will be going over process injection, where we will be hooking some simple malware to analyze what its doing. The code referenced in this post can be found [here](https://github.com/jayo78/basic-hooking). Thanks for reading! part 2 coming.
+In the next part we will be going over process injection, where we will be using the same hooks that we already developed but now from within a remote process. The code referenced in this post can be found [here](https://github.com/jayo78/basic-hooking). Thanks for reading! part 2 coming.

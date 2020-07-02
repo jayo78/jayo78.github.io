@@ -25,7 +25,7 @@ A program written in assembly is still an abstraction away from its final machin
 
 Various assemblers have different syntaxes and features, but all have the ability to produce machine code given assembly instructions. This initially generated machine code is called an object file (`.obj`), which is usually not directly executable. This intermediate object code form can later be *linked* with operating system specific libraries to create a native executable. 
 
-![Capture](/assets/images/assembler.png){: .align-center}
+![Capture](../assets/images/Learningx86/assembler.png){: .align-center}
 
 ###### Linking:
 
@@ -37,7 +37,7 @@ DLLs provide shared access to winAPI functions. The most used by programs are th
 
 Now with pretext we can fully understand the linker that creates a final executable:
 
-![linker](/assets/images/linker.png){: .align-center}
+![linker](../assets/images/Learningx86/linker.png){: .align-center}
 
 ###### What we will use:
 
