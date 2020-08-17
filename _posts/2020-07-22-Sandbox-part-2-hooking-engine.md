@@ -1,17 +1,17 @@
 ---
 layout: single
-title: Sandbox part 3 - adding minhook 
+title: Sandbox part 2 - hooking engine 
 date: 2020-07-22
 classes: wide
 ---
 
-Part 3 is the final chapter in our journey into sandbox development. In this part we will first deal with implementing the open-source hooking library, [minhook](https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra), as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.
+In part 2 we will first deal with implementing the open-source hooking library, [minhook](https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra), as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that can inject a DLL into a target executable. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.
 
 #### How does minhook work?
 
 *The source code is publicly available and very easy to read so check that out if this explanation doesn't suffice.*
 
-[minhook](https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra) is a light weight hooking engine which employs the same relative jump, inline hooking technique we covered in part 1 and 2. It is capable of hooking a wide variety of functions. Creating our own hooking engine would be a whole project itself due to the fact that Windows API function prologues can differ, making hooking certain functions difficult. We are using minhook to avoid the annoyances of detecting the different prologues and then adjusting our hooking technique or placement accordingly. Much like how we disassembled MessageBoxA in order to overwrite its first couple of bytes in part 1, minhook uses an internal disassembler to analyze each function and decide where to hook it. This is whats meant by "hooking engine."
+[minhook](https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra) is a light weight hooking engine which employs the same relative jump, inline hooking technique reviewed in part 1 and in "WinAPI Hooking Basics" It is capable of hooking a wide variety of functions. Creating our own hooking engine would be a whole project itself due to the fact that Windows API function prologues can differ, making hooking certain functions difficult. We are using minhook to avoid the annoyances of detecting the different prologues and then adjusting our hooking technique or placement accordingly. Minhook uses an internal disassembler to analyze each function and decide where to hook it. This is whats meant by "hooking engine."
 
 The only 3 functions we will be using from the library are `MH_Initialize`, `MH_CreateHookAPI`, and `MH_EnableHook`. These are powerful functions which abstract away the hooking process. `MH_Initialize` is simply called before hooking anything in order to initialize heap space for storing [trampoline functions](http://jbremer.org/x86-api-hooking-demystified/#ah-trampoline). `MH_CreateHookAPI` does all the heavy lifting to install a hook that we specify, lets look at its definition:
 
@@ -20,7 +20,7 @@ MH_STATUS WINAPI MH_CreateHookApi(
         LPCWSTR pszModule, LPCSTR pszProcName, LPVOID pDetour, LPVOID *ppOriginal);
 ```
 
-It takes the module name (DLL) that exports the function we want to hook, the actual function/procedure name, the proxy function (detour) address, and a function pointer which will eventually contain the address of the trampoline. This is information we used in part 1 and 2 when installing our own hooks. `MH_CreateHookAPI` first analyzes the function given to it in order to see where the hook should be placed. It then sets up a trampoline function internally within heap space that was previously allocated. The function pointer (ppOriginal) will now be populated with the trampoline address. `MH_EnableHook` patches the location found for the hook with a familiar relative jump to the proxy function.
+It takes the module name (DLL) that exports the function we want to hook, the actual function/procedure name, the proxy function (detour) address, and a function pointer which will eventually contain the address of the trampoline. `MH_CreateHookAPI` first analyzes the function given to it in order to see where the hook should be placed. It then sets up a trampoline function internally within heap space that was previously allocated. The function pointer (ppOriginal) will now be populated with the trampoline address. `MH_EnableHook` patches the location found for the hook with a familiar relative jump to the proxy function.
 
 #### Implementing minhook
 
@@ -148,10 +148,10 @@ We must override the `<<` operator twice, once for string values an another for 
 
 #### Conclusion
 
-This 3rd part in the mini series concludes our simple API monitor/sandbox build. Cool right?! It can certainly be expanded to include many more hooks, the version on my github only contains a few I consider useful. 
+This 2nd part in the mini series concludes our simple API monitor/sandbox build. Cool right?! It can certainly be expanded to include many more hooks, the version on my github only contains a few I consider useful. 
 
-This is a very basic sandbox implemented in userland, so it does have its limitations. It would be trivial for a developer to subvert our hooks by either detecting them or using native api calls that bypass higher level functions (we could hook these). Even professional sandboxes out there like croudstrike's falcon sandbox or cuckoo's open source sandbox don't fully prevent evasion by malicious programs and they run in kernel mode. Sandbox evasion, empolyed by malicious actors, and then subsequent, evasion detection, implemented by sandbox vendors are really interesting topics that highlight the constant arms race experienced in all facets of cybersecurity.
+This is a very basic sandbox implemented in userland, so it does have its limitations. It would be trivial for a developer to subvert our hooks by either detecting them or using native api calls that bypass higher level functions (we could hook these). Even professional sandboxes out there like croudstrike's falcon sandbox or cuckoo's open source sandbox can't fully prevent evasion by malicious programs and they run in kernel mode. Sandbox evasion, empolyed by malicious actors, and then subsequent, evasion detection, implemented by sandbox vendors are really interesting topics that highlight the constant arms race experienced in all facets of cybersecurity.
 
-Thanks for reading, I like to write about these ventures so I gain a better grasp on the subjects I'm learning. Hopefully it helped you too, or maybe even inspired you to do something dope.
+Anyways, thanks for reading, I like to write about these ventures so I gain a better grasp on the subjects I'm learning. Hopefully it helped you too, or maybe even inspired you to do something dope. If  your getting into reverse engineering I would certainly suggest you recreate this project or something similar, its kind of a right of passage - https://www.youtube.com/watch?v=rDQmh1yFWGU&lc=Ugy9XySH0-swpxu39kd4AaABAg 
 
  

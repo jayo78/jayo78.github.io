@@ -1,0 +1,639 @@
+<!doctype html>
+<!--
+  Minimal Mistakes Jekyll Theme 4.19.2 by Michael Rose
+  Copyright 2013-2019 Michael Rose - mademistakes.com | @mmistakes
+  Free for personal and commercial use under the MIT license
+  https://github.com/mmistakes/minimal-mistakes/blob/master/LICENSE
+-->
+<html lang="en" class="no-js">
+  <head>
+    <meta charset="utf-8">
+
+<!-- begin _includes/seo.html --><title>Sandbox part 2 - hooking engine -</title>
+<meta name="description" content="In part 2 we will first deal with implementing the open-source hooking library, minhook, as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that can inject a DLL into a target executable. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.">
+
+
+  <meta name="author" content="Jayson Hurst">
+
+
+<meta property="og:type" content="article">
+<meta property="og:locale" content="en_US">
+<meta property="og:site_name" content="">
+<meta property="og:title" content="Sandbox part 2 - hooking engine">
+<meta property="og:url" content="http://localhost:4000/Sandbox-part-2-hooking-engine/">
+
+
+  <meta property="og:description" content="In part 2 we will first deal with implementing the open-source hooking library, minhook, as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that can inject a DLL into a target executable. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.">
+
+
+
+
+
+
+
+  <meta property="article:published_time" content="2020-07-22T00:00:00-04:00">
+
+
+
+
+
+  
+
+  
+
+
+<link rel="canonical" href="http://localhost:4000/Sandbox-part-2-hooking-engine/">
+
+
+
+
+<script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    
+      "@type": "Person",
+      "name": "jayo78",
+      "url": "http://localhost:4000/"
+    
+  }
+</script>
+
+
+
+
+
+
+<!-- end _includes/seo.html -->
+
+
+<link href="/feed.xml" type="application/atom+xml" rel="alternate" title=" Feed">
+
+<!-- https://t.co/dKP3o1e -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+  document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/g, '') + ' js ';
+</script>
+
+<!-- For all browsers -->
+<link rel="stylesheet" href="/assets/css/main.css">
+
+<!--[if IE]>
+  <style>
+    /* old IE unsupported flexbox fixes */
+    .greedy-nav .site-title {
+      padding-right: 3em;
+    }
+    .greedy-nav button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      height: 100%;
+    }
+  </style>
+<![endif]-->
+
+
+
+    <!-- start custom head snippets -->
+
+<!-- insert favicons. use https://realfavicongenerator.net/ -->
+
+<!-- end custom head snippets -->
+
+  </head>
+
+  <body class="layout--single wide">
+    <nav class="skip-links">
+  <h2 class="screen-reader-text">Skip links</h2>
+  <ul>
+    <li><a href="#site-nav" class="screen-reader-shortcut">Skip to primary navigation</a></li>
+    <li><a href="#main" class="screen-reader-shortcut">Skip to content</a></li>
+    <li><a href="#footer" class="screen-reader-shortcut">Skip to footer</a></li>
+  </ul>
+</nav>
+
+    <!--[if lt IE 9]>
+<div class="notice--danger align-center" style="margin: 0;">You are using an <strong>outdated</strong> browser. Please <a href="https://browsehappy.com/">upgrade your browser</a> to improve your experience.</div>
+<![endif]-->
+
+    
+
+<div class="masthead">
+  <div class="masthead__inner-wrap">
+    <div class="masthead__menu">
+      <nav id="site-nav" class="greedy-nav">
+        
+          <a class="site-logo" href="/"><img src="/assets/images/logo.png" alt=""></a>
+        
+        <a class="site-title" href="/">
+          jayo78
+          
+        </a>
+        <ul class="visible-links"><li class="masthead__menu-item">
+              <a href="/">Home</a>
+            </li><li class="masthead__menu-item">
+              <a href="/year-archive/">Posts</a>
+            </li><li class="masthead__menu-item">
+              <a href="/about/">About</a>
+            </li></ul>
+        
+        <button class="greedy-nav__toggle hidden" type="button">
+          <span class="visually-hidden">Toggle menu</span>
+          <div class="navicon"></div>
+        </button>
+        <ul class="hidden-links hidden"></ul>
+      </nav>
+    </div>
+  </div>
+</div>
+
+
+    <div class="initial-content">
+      
+
+
+  
+    
+
+
+
+<nav class="breadcrumbs">
+  <ol itemscope itemtype="https://schema.org/BreadcrumbList">
+    
+    
+    
+      
+        <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+          <a href="http://localhost:4000/" itemprop="item"><span itemprop="name">Home</span></a>
+          <meta itemprop="position" content="1" />
+        </li>
+        <span class="sep">/</span>
+      
+      
+        <li class="current">Sandbox part 2 - hooking engine</li>
+      
+    
+  </ol>
+</nav>
+
+  
+
+
+<div id="main" role="main">
+  
+  <div class="sidebar sticky">
+  
+
+
+<div itemscope itemtype="https://schema.org/Person">
+
+  
+    <div class="author__avatar">
+      
+        <img src="/assets/images/avatar.jpg" alt="Jayson Hurst" itemprop="image">
+      
+    </div>
+  
+
+  <div class="author__content">
+    
+      <h3 class="author__name" itemprop="name">Jayson Hurst</h3>
+    
+    
+      <div class="author__bio" itemprop="description">
+        <p>Aspiring security researcher<br />Student at UMD</p>
+
+      </div>
+    
+  </div>
+
+  <div class="author__urls-wrapper">
+    <button class="btn btn--inverse">Follow</button>
+    <ul class="author__urls social-icons">
+      
+        <li itemprop="homeLocation" itemscope itemtype="https://schema.org/Place">
+          <i class="fas fa-fw fa-map-marker-alt" aria-hidden="true"></i> <span itemprop="name">Philadelphia, PA</span>
+        </li>
+      
+
+      
+        
+          
+            <li><a href="https://www.linkedin.com/in/jayo78" rel="nofollow noopener noreferrer"><i class="fas fa-fw fa-link" aria-hidden="true"></i><span class="label">LinkedIn</span></a></li>
+          
+        
+          
+            <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i><span class="label">GitHub</span></a></li>
+          
+        
+      
+
+      
+
+      
+        <li>
+          <a href="mailto:jhurst1@terpmail.umd.edu">
+            <meta itemprop="email" content="jhurst1@terpmail.umd.edu" />
+            <i class="fas fa-fw fa-envelope-square" aria-hidden="true"></i><span class="label">Email</span>
+          </a>
+        </li>
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      
+
+      <!--
+  <li>
+    <a href="http://link-to-whatever-social-network.com/user/" itemprop="sameAs" rel="nofollow noopener noreferrer">
+      <i class="fas fa-fw" aria-hidden="true"></i> Custom Social Profile Link
+    </a>
+  </li>
+-->
+    </ul>
+  </div>
+</div>
+
+  
+  </div>
+
+
+
+  <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
+    <meta itemprop="headline" content="Sandbox part 2 - hooking engine">
+    <meta itemprop="description" content="In part 2 we will first deal with implementing the open-source hooking library, minhook, as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that can inject a DLL into a target executable. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.">
+    <meta itemprop="datePublished" content="2020-07-22T00:00:00-04:00">
+    
+
+    <div class="page__inner-wrap">
+      
+        <header>
+          <h1 id="page-title" class="page__title" itemprop="headline">Sandbox part 2 - hooking engine
+</h1>
+          
+            <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  5 minute read
+
+</p>
+          
+        </header>
+      
+
+      <section class="page__content" itemprop="text">
+        
+        <p>In part 2 we will first deal with implementing the open-source hooking library, <a href="https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra">minhook</a>, as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that can inject a DLL into a target executable. Our development in this part will be focused on the DLL that will be injected, which will now be called the monitor. The monitor will contain both our hooking engine and logger to handle API interception and reporting respectively.</p>
+
+<h4 id="how-does-minhook-work">How does minhook work?</h4>
+
+<p><em>The source code is publicly available and very easy to read so check that out if this explanation doesn’t suffice.</em></p>
+
+<p><a href="https://www.codeproject.com/Articles/44326/MinHook-The-Minimalistic-x-x-API-Hooking-Libra">minhook</a> is a light weight hooking engine which employs the same relative jump, inline hooking technique reviewed in part 1 and in “WinAPI Hooking Basics” It is capable of hooking a wide variety of functions. Creating our own hooking engine would be a whole project itself due to the fact that Windows API function prologues can differ, making hooking certain functions difficult. We are using minhook to avoid the annoyances of detecting the different prologues and then adjusting our hooking technique or placement accordingly. Minhook uses an internal disassembler to analyze each function and decide where to hook it. This is whats meant by “hooking engine.”</p>
+
+<p>The only 3 functions we will be using from the library are <code class="language-plaintext highlighter-rouge">MH_Initialize</code>, <code class="language-plaintext highlighter-rouge">MH_CreateHookAPI</code>, and <code class="language-plaintext highlighter-rouge">MH_EnableHook</code>. These are powerful functions which abstract away the hooking process. <code class="language-plaintext highlighter-rouge">MH_Initialize</code> is simply called before hooking anything in order to initialize heap space for storing <a href="http://jbremer.org/x86-api-hooking-demystified/#ah-trampoline">trampoline functions</a>. <code class="language-plaintext highlighter-rouge">MH_CreateHookAPI</code> does all the heavy lifting to install a hook that we specify, lets look at its definition:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">MH_STATUS</span> <span class="n">WINAPI</span> <span class="nf">MH_CreateHookApi</span><span class="p">(</span>
+        <span class="n">LPCWSTR</span> <span class="n">pszModule</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">pszProcName</span><span class="p">,</span> <span class="n">LPVOID</span> <span class="n">pDetour</span><span class="p">,</span> <span class="n">LPVOID</span> <span class="o">*</span><span class="n">ppOriginal</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>It takes the module name (DLL) that exports the function we want to hook, the actual function/procedure name, the proxy function (detour) address, and a function pointer which will eventually contain the address of the trampoline. <code class="language-plaintext highlighter-rouge">MH_CreateHookAPI</code> first analyzes the function given to it in order to see where the hook should be placed. It then sets up a trampoline function internally within heap space that was previously allocated. The function pointer (ppOriginal) will now be populated with the trampoline address. <code class="language-plaintext highlighter-rouge">MH_EnableHook</code> patches the location found for the hook with a familiar relative jump to the proxy function.</p>
+
+<h4 id="implementing-minhook">Implementing minhook</h4>
+
+<p>Since we are using <code class="language-plaintext highlighter-rouge">MH_CreateHookAPI</code> as previously explained and want to hook a bunch of functions it makes sense to define a general structure to hold all the information we need to pass to this function.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">struct</span> <span class="n">HOOK_INFO</span> <span class="p">{</span>
+    <span class="n">LPCWSTR</span> <span class="n">lib</span><span class="p">;</span>
+    <span class="n">LPCSTR</span> <span class="n">target</span><span class="p">;</span>
+    <span class="n">LPVOID</span> <span class="n">proxy</span><span class="p">;</span>
+    <span class="n">LPVOID</span> <span class="n">fp</span><span class="p">;</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>Lets look at hooking <code class="language-plaintext highlighter-rouge">GetProcAddress</code> as an example of the values that would go into this struct.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">{</span>
+	<span class="s">L"kernel32"</span><span class="p">,</span> 
+	<span class="s">"GetProcAddress"</span><span class="p">,</span>
+	<span class="o">&amp;</span><span class="n">ProxyGetProcAddress</span><span class="p">,</span>
+	<span class="o">&amp;</span><span class="n">fpGetProcAddress</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The first two parameters are just the library containing the function and then the actual function. <code class="language-plaintext highlighter-rouge">MH_CreateHookAPI</code> handles loading and finding the function from these strings. The next two parameters are pointers to our proxy function and a function that will get populated by minhook with a trampoline to the original API function (past our hook). Lets look at what these look like:</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">FARPROC</span> <span class="n">WINAPI</span> <span class="nf">ProxyGetProcAddress</span><span class="p">(</span><span class="n">HMODULE</span> <span class="n">hModule</span><span class="p">,</span> <span class="n">LPCSTR</span> <span class="n">lpProcName</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="kt">wchar_t</span> <span class="n">wProcName</span><span class="p">[</span><span class="mi">128</span><span class="p">];</span>
+    <span class="n">MultiByteToWideChar</span><span class="p">(</span><span class="n">CP_THREAD_ACP</span><span class="p">,</span> <span class="p">(</span><span class="n">DWORD</span><span class="p">)</span><span class="mi">0</span><span class="p">,</span> <span class="n">lpProcName</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="n">wProcName</span><span class="p">,</span> <span class="mi">128</span><span class="p">);</span>
+    <span class="n">logger</span> <span class="o">&lt;&lt;</span> <span class="s">L"[HOOK] Intercepted call to GetProcAddress:</span><span class="se">\n</span><span class="s">"</span> <span class="o">&lt;&lt;</span> <span class="s">L"- Function Name: "</span> <span class="o">&lt;&lt;</span> 		<span class="n">wProcName</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+    <span class="k">return</span> <span class="n">fpGetProcAddress</span><span class="p">(</span><span class="n">hModule</span><span class="p">,</span> <span class="n">lpProcName</span><span class="p">);</span>
+<span class="p">}</span>
+
+<span class="k">typedef</span> <span class="nf">FARPROC</span> <span class="p">(</span><span class="n">WINAPI</span> <span class="o">*</span><span class="n">GETPROCADDRESS</span><span class="p">)(</span><span class="n">HMODULE</span><span class="p">,</span> <span class="n">LPCSTR</span><span class="p">);</span>
+<span class="n">GETPROCADDRESS</span> <span class="n">fpGetProcAddress</span><span class="o">=</span> <span class="nb">NULL</span><span class="p">;</span>
+</code></pre></div></div>
+
+<p><em>we will go over the logger class, but this proxy is just converting the lpProcName argument to Unicode and then reporting it to the logger object through a stream</em></p>
+
+<p>Okay now that we have a general structure we can create an array of HOOK_INFO structs and loop through them to hook as many functions as we would like.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">HOOK_INFO</span> <span class="n">hooks</span><span class="p">[]</span><span class="o">=</span> <span class="p">{</span>
+    <span class="p">{</span>
+        <span class="s">L"kernel32"</span><span class="p">,</span> 
+        <span class="s">"GetProcAddress"</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="n">ProxyGetProcAddress</span><span class="p">,</span>
+        <span class="o">&amp;</span><span class="n">fpGetProcAddress</span>
+    <span class="p">},</span>
+    
+    <span class="p">...</span> <span class="n">more</span> <span class="n">hooks</span> <span class="p">...</span>
+<span class="p">};</span>
+
+<span class="n">__forceinline</span> <span class="n">BOOL</span> <span class="nf">install_hook</span><span class="p">(</span><span class="n">HOOK_INFO</span> <span class="o">*</span><span class="n">pHookInfo</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">MH_CreateHookApi</span><span class="p">(</span><span class="n">pHookInfo</span><span class="o">-&gt;</span><span class="n">lib</span><span class="p">,</span> <span class="n">pHookInfo</span><span class="o">-&gt;</span><span class="n">target</span><span class="p">,</span> <span class="n">pHookInfo</span><span class="o">-&gt;</span><span class="n">proxy</span><span class="p">,</span> <span class="p">(</span><span class="n">LPVOID</span> <span class="o">*</span><span class="p">)</span>			<span class="p">(</span><span class="n">pHookInfo</span><span class="o">-&gt;</span><span class="n">fp</span><span class="p">))</span> <span class="o">!=</span> <span class="n">MH_OK</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">FALSE</span><span class="p">;</span>
+
+    <span class="k">return</span> <span class="n">TRUE</span><span class="p">;</span>
+<span class="p">}</span>
+
+<span class="n">VOID</span> <span class="nf">install_all</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="kt">int</span> <span class="n">numElts</span><span class="o">=</span> <span class="k">sizeof</span><span class="p">(</span><span class="n">hooks</span><span class="p">)</span><span class="o">/</span><span class="k">sizeof</span><span class="p">(</span><span class="n">hooks</span><span class="p">[</span><span class="mi">0</span><span class="p">]);</span>
+
+    <span class="k">for</span> <span class="p">(</span><span class="kt">int</span> <span class="n">i</span><span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">numElts</span><span class="p">;</span> <span class="n">i</span><span class="o">++</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">install_hook</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hooks</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span>
+            <span class="n">logger</span> <span class="o">&lt;&lt;</span> <span class="s">L"[+] Installed hook in: "</span> <span class="o">&lt;&lt;</span> <span class="n">hooks</span><span class="p">[</span><span class="n">i</span><span class="p">].</span><span class="n">target</span> <span class="o">&lt;&lt;</span> <span class="s">"</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>All of the above code is contained in the monitor DLL and ready to be injected. Here is the DLL entry, which first initializes minhook, installs the hooks, and then enables the hooks.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">BOOL</span> <span class="n">WINAPI</span> <span class="nf">DllMain</span><span class="p">(</span><span class="n">HINSTANCE</span> <span class="k">const</span> <span class="n">instance</span><span class="p">,</span> <span class="n">DWORD</span> <span class="k">const</span> <span class="n">reason</span><span class="p">,</span> <span class="n">LPVOID</span> <span class="k">const</span> <span class="n">reserved</span><span class="p">)</span>  
+<span class="p">{</span>
+    <span class="k">switch</span> <span class="p">(</span><span class="n">reason</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="k">case</span> <span class="n">DLL_PROCESS_ATTACH</span><span class="p">:</span>
+            <span class="n">logger</span> <span class="o">&lt;&lt;</span> <span class="s">L"[+] Installing hooks...</span><span class="se">\n</span><span class="s">"</span><span class="p">;</span>
+
+            <span class="n">MH_Initialize</span><span class="p">();</span>
+            <span class="n">install_all</span><span class="p">();</span>
+            <span class="n">MH_EnableHook</span><span class="p">(</span><span class="n">MH_ALL_HOOKS</span><span class="p">);</span>
+
+            <span class="n">logger</span> <span class="o">&lt;&lt;</span> <span class="s">L"[+] Hooks installed, Resuming main thread..."</span> <span class="o">&lt;&lt;</span> <span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+            <span class="k">break</span><span class="p">;</span>
+    <span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">TRUE</span><span class="p">;</span>  
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>In the injector we wait for the remote thread to load and execute the monitor. At that point we can resume the process with our hooks intact.</p>
+
+<h4 id="logger">Logger</h4>
+
+<p>The logger I wrote simply overrides the <code class="language-plaintext highlighter-rouge">&lt;&lt;</code> operator when applied to a logger object. The override sends strings to an internal stream that gets flushed to a log file whenever it sees <code class="language-plaintext highlighter-rouge">std::endl</code>.</p>
+
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// override the &lt;&lt; operator to redirect values to our internal stream</span>
+    <span class="n">template</span> <span class="o">&lt;</span><span class="kr">typename</span> <span class="n">T</span><span class="o">&gt;</span> 
+    <span class="n">Logger</span><span class="o">&amp;</span> <span class="n">operator</span> <span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">T</span> <span class="k">const</span><span class="o">&amp;</span> <span class="n">value</span><span class="p">)</span> 
+    <span class="p">{</span>   
+        <span class="n">stream</span> <span class="o">&lt;&lt;</span> <span class="n">value</span><span class="p">;</span>
+        <span class="k">return</span> <span class="o">*</span><span class="n">this</span><span class="p">;</span>
+    <span class="p">}</span>
+
+<span class="c1">// override the &lt;&lt; operator to detect the std::endl stream manipulation</span>
+    <span class="n">Logger</span><span class="o">&amp;</span> <span class="n">operator</span><span class="o">&lt;&lt;</span><span class="p">(</span><span class="n">ManipFn</span> <span class="n">manip</span><span class="p">)</span>
+    <span class="p">{</span> 
+        <span class="k">if</span> <span class="p">(</span><span class="n">manip</span> <span class="o">==</span> <span class="n">static_cast</span><span class="o">&lt;</span><span class="n">ManipFn</span><span class="o">&gt;</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">))</span>
+            <span class="n">this</span><span class="o">-&gt;</span><span class="n">write_log</span><span class="p">();</span>
+
+        <span class="k">return</span> <span class="o">*</span><span class="n">this</span><span class="p">;</span>
+    <span class="p">}</span>
+</code></pre></div></div>
+
+<p>We must override the <code class="language-plaintext highlighter-rouge">&lt;&lt;</code> operator twice, once for string values an another for stream manipulations. Have a look at <a href="https://stackoverflow.com/questions/511768/how-to-use-my-logging-class-like-a-std-c-stream">this</a> stack overflow thread, I used modified versions of the code suggested here. When a manipulation is passed we check to see if its <code class="language-plaintext highlighter-rouge">std::endl</code>. If it is we write the current contents of the stream to a file that was previously opened in the class constructor. The full code can be found on <a href="https://github.com/jayo78/win-api-monitor/blob/master/Monitor/logger.h">github</a>.</p>
+
+<h4 id="conclusion">Conclusion</h4>
+
+<p>This 2nd part in the mini series concludes our simple API monitor/sandbox build. Cool right?! It can certainly be expanded to include many more hooks, the version on my github only contains a few I consider useful.</p>
+
+<p>This is a very basic sandbox implemented in userland, so it does have its limitations. It would be trivial for a developer to subvert our hooks by either detecting them or using native api calls that bypass higher level functions (we could hook these). Even professional sandboxes out there like croudstrike’s falcon sandbox or cuckoo’s open source sandbox can’t fully prevent evasion by malicious programs and they run in kernel mode. Sandbox evasion, empolyed by malicious actors, and then subsequent, evasion detection, implemented by sandbox vendors are really interesting topics that highlight the constant arms race experienced in all facets of cybersecurity.</p>
+
+<p>Anyways, thanks for reading, I like to write about these ventures so I gain a better grasp on the subjects I’m learning. Hopefully it helped you too, or maybe even inspired you to do something dope. If  your getting into reverse engineering I would certainly suggest you recreate this project or something similar, its kind of a right of passage - https://www.youtube.com/watch?v=rDQmh1yFWGU&amp;lc=Ugy9XySH0-swpxu39kd4AaABAg</p>
+
+
+        
+      </section>
+
+      <footer class="page__meta">
+        
+        
+
+
+        
+  <p class="page__date"><strong><i class="fas fa-fw fa-calendar-alt" aria-hidden="true"></i> Updated:</strong> <time datetime="2020-07-22T00:00:00-04:00">July 22, 2020</time></p>
+
+
+      </footer>
+
+      <section class="page__share">
+  
+    <h4 class="page__share-title">Share on</h4>
+  
+
+  <a href="https://twitter.com/intent/tweet?text=Sandbox+part+2+-+hooking+engine%20http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-2-hooking-engine%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-2-hooking-engine%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-2-hooking-engine%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+</section>
+
+
+      
+  <nav class="pagination">
+    
+      <a href="/Sandbox-part-1-injecting-hooks/" class="pagination--pager" title="Sandbox part 1 - injecting hooks
+">Previous</a>
+    
+    
+      <a href="#" class="pagination--pager disabled">Next</a>
+    
+  </nav>
+
+    </div>
+
+    
+  </article>
+
+  
+  
+    <div class="page__related">
+      <h4 class="page__related-title">You may also enjoy</h4>
+      <div class="grid__wrapper">
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Sandbox-part-1-injecting-hooks/" rel="permalink">Sandbox part 1 - injecting hooks
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  9 minute read
+
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">In this 2 part series I will walk through creating a simple userland sandbox that is able to peak inside the functionality of a windows executable. It does t...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/WinAPI-Hooking-basics/" rel="permalink">WinAPI Hooking Basics
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  7 minute read
+
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understa...</p>
+  </article>
+</div>
+
+        
+      </div>
+    </div>
+  
+  
+</div>
+
+    </div>
+
+    
+
+    <div id="footer" class="page__footer">
+      <footer>
+        <!-- start custom footer snippets -->
+
+<!-- end custom footer snippets -->
+        <div class="page__footer-follow">
+  <ul class="social-icons">
+    
+      <li><strong>Follow:</strong></li>
+    
+
+    
+      
+        
+      
+        
+      
+        
+          <li><a href="https://github.com/jayo78" rel="nofollow noopener noreferrer"><i class="fab fa-fw fa-github" aria-hidden="true"></i> GitHub</a></li>
+        
+      
+        
+      
+        
+      
+        
+      
+    
+
+    <li><a href="/feed.xml"><i class="fas fa-fw fa-rss-square" aria-hidden="true"></i> Feed</a></li>
+  </ul>
+</div>
+
+<div class="page__footer-copyright">&copy; 2020 jayo78. Powered by <a href="https://jekyllrb.com" rel="nofollow">Jekyll</a> &amp; <a href="https://mademistakes.com/work/minimal-mistakes-jekyll-theme/" rel="nofollow">Minimal Mistakes</a>.</div>
+
+      </footer>
+    </div>
+
+    
+  <script src="/assets/js/main.min.js"></script>
+  <script src="https://kit.fontawesome.com/4eee35f757.js"></script>
+
+
+
+
+
+
+
+
+
+
+  </body>
+</html>

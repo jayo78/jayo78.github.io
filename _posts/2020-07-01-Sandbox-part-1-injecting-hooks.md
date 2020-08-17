@@ -1,15 +1,41 @@
 ---
 layout: single
-title: Sandbox part 2 - injecting hooks
+title: Sandbox part 1 - injecting hooks
 date: 2020-07-01
 classes: wide
 ---
 
-In part 2 of building a userland sandbox I will be walking through injecting hooks into a remote process in order to intercept a target executable's calls to the Windows API. Refer to [part 1](https://jayo78.github.io/Sandbox-part-1-hooking-basics/) for a more in-depth explanation of a sandbox. In this part we will see a more complete example of sandbox functionality using process injection. We will first be implementing a simple injector using the CreateRemoteThread + LoadLibrary DLL injection technique which has been thoroughly covered online and used for years. The hooks we created in part 1 will now be used to hook a remote processes calls. Then in Part 3 we finish up by implementing an open source hooking library and developing a mini logger class for logging the information we get from an intercepted call. 
+In this 2 part series I will walk through creating a simple userland sandbox that is able to peak inside the functionality of a windows executable. It does this by injecting a monitor DLL, whos job is to install inline API hooks that intercept and report any calls made by the executable. This type of software is widely used to examine malicious programs dynamically or ensure a secure execution environment when dealing with untrusted users. By building your own sandbox you will be introduced to some really cool memory hacking techniques seen in malware and game cheats. This project is easily adaptable and I suggest the reader implement their own design.
 
-I will focus my attention on the actual implementation of injecting and installing hooks. There are extensive recourses out there that do a better job than I would at explaining topics like processes, threads, OS internals, etc. I used many resources that I'll share and I encourage the reader to extend your own research beyond this article where you find gaps in knowledge. Lets get into it!
+#### Prerequisites and Resources
 
-#### Overview
+You will need to understand:
+
+- [DLLs](https://support.microsoft.com/en-us/help/815065/what-is-a-dll), [Windows processes and threads](https://docs.microsoft.com/en-us/windows/win32/procthread/processes-and-threads), [PE file format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format)
+- Windows API hooking - see resources below or my blog post "WinAPI Hooking Basics"
+- C/C++, basic x86, debugging
+
+Resources I used:
+
+- [dissecting inline hooks](http://www.binaryguard.com/bgc/malware/sandbox/2015/11/09/dissecting_inline_hooks.html)
+- [x86 api hooking demystified](http://jbremer.org/x86-api-hooking-demystified/)
+- [inline hooking for programmers](https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html)
+
+#### So what is a sandbox?
+
+A sandbox is designed to examine the behavior of an executable and is largely used in Cybersecurity solutions for analyzing malware. There are a few open source projects like [Cuckoo](https://cuckoosandbox.org/). 
+
+The idea is to run a program in a controlled environment to see what it attempts to do. A native executable will need to reach out to the host operating system in order to have any functionality. For example, it might need to manipulate a file using the I/O functions or use sockets to connect to remote servers. In order to intercept these calls to the operating system, a userland sandbox will need to sit in the middle of this communication.
+
+We will be building a sandbox for Windows executables, which have the PE file [format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format). The Windows API (win32 API) allows for userland programs to interact with the Windows OS by providing functions in shared libraries called *Dynamically Linked Libraries*. The sandbox will need to monitor these functions.
+
+![Sandbox](../assets/images/SandboxPart1/Sandbox.PNG){: .align-center}
+
+Since every process essentially has their very own copy of Windows DLLs needed to execute, our sandbox will need to be injected into the executable's process that we want to examine. Once injected the sandbox can insert changes known as *hooks* into the imported DLL functions that will now be used by the executable. 
+
+I will focus my attention on the actual implementation of injecting and installing hooks. There are extensive recourses out there that do a better job than I would at explaining topics like processes, threads, OS internals, etc. I used many resources that I'll share and I encourage the reader to extend your own research beyond this article where you find gaps in knowledge. 
+
+#### Process Injection
 
 Processes are more than a space for a program to execute in. There is a lot of behind the scenes work done by the Windows OS in terms of the security of a program, communication with other processes, and access to shared recourses. The birth of a process involves the mapping of a program's memory on disk to virtual memory where it can begin executing. Windows separates address spaces using virtualization so they don't bump into each other's memory and so it can easily interface with each one individually - read [here](https://answers.microsoft.com/en-us/windows/forum/windows_10-performance/physical-and-virtual-memory-in-windows-10/e36fb5bc-9ac8-49af-951c-e7d39b979938?auth=1). 
 
@@ -49,7 +75,7 @@ if (!CreateProcess(NULL, targetExe, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, N
     CloseHandle( pi.hThread );
 
     return 0;
-}
+
 ```
 
 Lets take a look at our defined `inject_DLL` function. It takes the path to our DLL that we would like to inject and a handle to the process we created. To start out we will need the LoadLibrary function address, which can be found inside the kernel32 library, `kernel32.dll`.
@@ -131,9 +157,69 @@ void inject_DLL(TCHAR *dllPath, HANDLE process)
 
 #### Hooking from within
 
-The injected DLL will need to all the hooking from inside the target process, so lets look at how DLLs can be developed. DLLs can be attached to by a process and its threads in order to execute needed functionality, usually through an exported function. A normal use would be to call `LoadLibrary` on the DLL to get a handle and then `GetProcAddress` to find the desired exported function. The point of the switch cases, seen below, is so the developer has a chance to set up structures/internals before an exported function is called. We won't be exporting functions but will instead do our hooking from the entry point, which isn't necessarily good [practice](https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-best-practices):
+The injected DLL will need to install hooks from inside the target process, so lets look at how DLLs can be developed. DLLs can be attached to by a process and its threads in order to execute needed functionality, usually through an exported function. A normal use would be to call `LoadLibrary` on the DLL to get a handle and then `GetProcAddress` to find the desired exported function. The point of the switch cases, seen in `DllMain` below, is so the developer has a chance to set up structures/internals before an exported function is called. We won't be exporting functions but will instead do our hooking from the entry point, which isn't necessarily good [practice](https://docs.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-best-practices).
 
-```c++
+For a quick demo we will use the same MessageBoxA hook from ["WinAPI Hooking Basics"](https://github.com/jayo78/basic-hooking/blob/master/hook_v2.cpp), but this time it will be injected by our injector into a sample program.
+
+```c
+#include <iostream>
+#include <Windows.h>
+
+#pragma comment(lib,"user32.lib")
+
+typedef int (WINAPI *defTrampolineFunc)(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType);
+LPVOID trampoline_address; 
+
+// The proxy function we will jump to after the hook has been installed
+int __stdcall proxy_function(HWND hWnd, LPCSTR lpText, LPCSTR lpCaption, UINT uType)
+{
+    std::cout << "----------intercepted call to MessageBoxA----------\n";
+    std::cout << "Text: " << (LPCSTR)lpText << "\nCaption: " << (LPCSTR)lpCaption << "\n";
+
+    // pass to the trampoline with altered arguments which will then return to MessageBoxA
+    defTrampolineFunc trampoline= (defTrampolineFunc)trampoline_address;
+    return trampoline(hWnd, "yeet", "yeet", uType);
+}
+
+void install_hook()
+{
+    HINSTANCE hinstLib;
+    VOID *proxy_address;
+    DWORD *relative_offset;
+    DWORD *hook_address;
+    DWORD src; 
+    DWORD dst;
+    CHAR patch[5]= {0};
+    char saved_buffer[5]; // buffer to save the original bytes
+    FARPROC function_address= NULL;
+
+    // 1. get memory address of the MessageBoxA function from user32.dll 
+    hinstLib= LoadLibraryA(TEXT("user32.dll"));
+    function_address= GetProcAddress(hinstLib, "MessageBoxA");
+
+    // 2. save the first 5 bytes into saved_buffer
+    ReadProcessMemory(GetCurrentProcess(), function_address, saved_buffer, 5, NULL);
+
+    // 3. overwrite the first 5 bytes with a jump to proxy_function
+    proxy_address= &proxy_function;
+    src= (DWORD)function_address + 5; 
+    dst= (DWORD)proxy_address;
+    relative_offset= (DWORD *)(dst-src); 
+
+    memcpy(patch, "\xE9", 1);
+    memcpy(patch + 1, &relative_offset, 4);
+
+    WriteProcessMemory(GetCurrentProcess(), (LPVOID)function_address, patch, 5, NULL);
+
+    // 4. Build the trampoline
+    trampoline_address= VirtualAlloc(NULL, 11, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    hook_address= (DWORD *)((DWORD)function_address + 5);
+    memcpy((BYTE *)trampoline_address, &saved_buffer, 5);
+    memcpy((BYTE *)trampoline_address + 5, "\x68", 1);
+    memcpy((BYTE *)trampoline_address + 6, &hook_address, 4);
+    memcpy((BYTE *)trampoline_address + 10, "\xC3", 1);
+}
+
 BOOL WINAPI DllMain (HINSTANCE const instance, DWORD const reason, LPVOID const reserved)  
 {
     switch (reason)
@@ -155,7 +241,7 @@ BOOL WINAPI DllMain (HINSTANCE const instance, DWORD const reason, LPVOID const 
 
 `DllMain` is called upon a process/thread attach or detach and is the DLL's entry point. `LoadLibrary` triggers this entry point and will execute the code in the `DLL_PROCESS_ATTACH` case, see [here](https://docs.microsoft.com/en-us/previous-versions/windows/desktop/mscs/implementing-dllmain). 
 
-For a quick demo we will use the same MessageBoxA hook from [part 1](https://github.com/jayo78/basic-hooking/blob/master/hook_v2.cpp) but now we'll inject it into a simple test program that you will need to compile:
+We'll inject it into a simple test program that you will need to compile:
 
 ```c++
 #include <windows.h>
@@ -172,4 +258,4 @@ Once we have our DLL, use the injector (injector.exe) like so: `injector.exe <te
 
 #### Conclusion
 
-In this part 2 of 3 posts on building a sandbox, we walked through DLL injection for the purpose of installing hooks into a remote process. Don't worry, we will be hooking much more than MessageBoxA. In part 3 we will implement the minhook library as a hooking engine to hook and monitor a wide variety of windows functions. 
+In this first of two posts on building a sandbox, we walked through DLL injection for the purpose of installing hooks into a remote process. Don't worry, we will be hooking much more than MessageBoxA. In part 2 we will implement the minhook library as a hooking engine to hook and monitor a wide variety of windows functions. 

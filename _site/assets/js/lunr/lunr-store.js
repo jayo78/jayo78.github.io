@@ -1,13 +1,19 @@
 var store = [{
-        "title": "Learning x86 with the winAPI",
-        "excerpt":"This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” program to cover how windows functions can be called in assembly. While most native applications (.exe) are written in high level languages like C/C++ and...","categories": [],
+        "title": "WinAPI Hooking Basics",
+        "excerpt":"API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory. When paired...","categories": [],
         "tags": [],
-        "url": "http://localhost:4000/Learning-x86-with-the-winAPI/",
+        "url": "http://localhost:4000/WinAPI-Hooking-basics/",
         "teaser": null
       },{
-        "title": "Sandbox part 1 - basic hooking",
-        "excerpt":"In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs...","categories": [],
+        "title": "Sandbox part 1 - injecting hooks",
+        "excerpt":"In this 2 part series I will walk through creating a simple userland sandbox that is able to peak inside the functionality of a windows executable. It does this by injecting a monitor DLL, whos job is to install inline API hooks that intercept and report any calls made by...","categories": [],
         "tags": [],
-        "url": "http://localhost:4000/Sandbox-part-1-hooking-basics/",
+        "url": "http://localhost:4000/Sandbox-part-1-injecting-hooks/",
+        "teaser": null
+      },{
+        "title": "Sandbox part 2 - hooking engine",
+        "excerpt":"In part 2 we will first deal with implementing the open-source hooking library, minhook, as our hooking engine to ensure more reliable and efficient hooks. Then we will add a mini logger class to conveniently log all the information we receive to a file. We previously developed an injector that...","categories": [],
+        "tags": [],
+        "url": "http://localhost:4000/Sandbox-part-2-hooking-engine/",
         "teaser": null
       }]

@@ -1,46 +1,17 @@
 ---
 layout: single
-title: Sandbox part 1 - basic hooking
+title: WinAPI Hooking Basics
 date: 2020-06-22
 classes: wide
 ---
 
+API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory.  When paired with process injection, hooking can either give an insight into what an executable attempts to do or maliciously intercept and alter any calls made to the WinAPI. 
 
-In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.
+#### Background
 
-#### Prerequisites and Resources
+I will be covering the popular technique of in-line hooking. This method simply attempts to replace the beginning few bytes of an exported function from a DLL loaded and used by the targeted executable/process. The overwrite will in some way jump to a memory location inside the process that you control. From there its up to you to decide what happens with the intercepted call. You could for example, hook CreateFile and once a call is intercepted, just drop it and return unsuccessfully. The effect in this example would be denying access to creating files, or if more targeted, denying access to only certain files.
 
-You will need to understand:
-
-- [DLLs](https://support.microsoft.com/en-us/help/815065/what-is-a-dll), [Windows processes and threads](https://docs.microsoft.com/en-us/windows/win32/procthread/processes-and-threads), [PE file format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format)
-- C/C++, basic x86, debugging
-
-Resources I used:
-
-- [dissecting inline hooks](http://www.binaryguard.com/bgc/malware/sandbox/2015/11/09/dissecting_inline_hooks.html)
-- [x86 api hooking demystified](http://jbremer.org/x86-api-hooking-demystified/)
-- [inline hooking for programmers](https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html)
-
-#### So what is a sandbox?
-
-A sandbox is designed to examine the behavior of an executable and is largely used in Cybersecurity solutions for analyzing malware. There are a few open source projects like [Cuckoo](https://cuckoosandbox.org/). 
-
-The idea is to run a program in a controlled environment to see what it attempts to do. A native executable will need to reach out to the host operating system in order to have any functionality. For example, it might need to manipulate a file using the I/O functions or use sockets to connect to remote servers. In order to intercept these calls to the operating system, a userland sandbox will need to sit in the middle of this communication.
-
-We will be building a sandbox for Windows executables, which have the PE file [format](https://docs.microsoft.com/en-us/windows/win32/debug/pe-format). The Windows API (win32 API) allows for userland programs to interact with the Windows OS by providing functions in shared libraries called *Dynamically Linked Libraries*. The sandbox will need to monitor these functions.
-
-![Sandbox](../assets/images/SandboxPart1/Sandbox.PNG){: .align-center}
-
-Since every process essentially has their very own copy of Windows DLLs needed to execute, our sandbox will need to be injected into the executable's process that we want to examine. Once injected the sandbox can insert changes known as *hooks* into the imported DLL functions that will now be used by the executable. 
-
-**How it works:**
-
-1. Attach to a process, and inject our own DLL (Part 2)
-2. Hook Windows API functions from within the injected process (Part 1, *you are here*)
-3. Intercept and monitor API calls
-4. profit???
-
-I will cover injection in part 2 so stay tuned. First lets understand hooks.
+Its easy to envision the usefulness of this powerful technique. There has been a lot of development using hooking methods, including game cheats, Anti-Virus/EDR, and malware. This guide is oriented for userland hooking and seeks to provide you the core understanding of how hooking works,.
 
 #### The classic 5 byte hook
 
@@ -223,7 +194,3 @@ View the full example on [github](https://github.com/jayo78/basic-hooking/blob/m
 #### Conclusion
 
 We covered a simple 5 byte - relative jump hook that should have given you a taste of what hooks are and how they can be useful. There are many ways to implement hooks, some more complicated than others. Please see [here](http://jbremer.org/x86-api-hooking-demystified/) for more hooking examples. 
-
-The sandbox that were building will need to hook many functions. Since this can quickly get quite tedious due to the fact that each target function is different, we will need a hooking engine. A hooking engine will be able to hook any function given to it utilizing an internal disassembler - see [here](https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html). 
-
-In the next part we will be going over process injection, where we will be using the same hooks that we already developed but now from within a remote process. The code referenced in this post can be found [here](https://github.com/jayo78/basic-hooking). Thanks for reading! part 2 coming.

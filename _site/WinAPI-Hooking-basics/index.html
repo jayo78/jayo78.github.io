@@ -9,8 +9,8 @@
   <head>
     <meta charset="utf-8">
 
-<!-- begin _includes/seo.html --><title>Sandbox part 1 - basic hooking -</title>
-<meta name="description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+<!-- begin _includes/seo.html --><title>WinAPI Hooking Basics -</title>
+<meta name="description" content="API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory.  When paired with process injection, hooking can either give an insight into what an executable attempts to do or maliciously intercept and alter any calls made to the WinAPI.">
 
 
   <meta name="author" content="Jayson Hurst">
@@ -19,11 +19,11 @@
 <meta property="og:type" content="article">
 <meta property="og:locale" content="en_US">
 <meta property="og:site_name" content="">
-<meta property="og:title" content="Sandbox part 1 - basic hooking">
-<meta property="og:url" content="http://localhost:4000/Sandbox-part-1-hooking-basics/">
+<meta property="og:title" content="WinAPI Hooking Basics">
+<meta property="og:url" content="http://localhost:4000/WinAPI-Hooking-basics/">
 
 
-  <meta property="og:description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+  <meta property="og:description" content="API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory.  When paired with process injection, hooking can either give an insight into what an executable attempts to do or maliciously intercept and alter any calls made to the WinAPI.">
 
 
 
@@ -42,7 +42,7 @@
   
 
 
-<link rel="canonical" href="http://localhost:4000/Sandbox-part-1-hooking-basics/">
+<link rel="canonical" href="http://localhost:4000/WinAPI-Hooking-basics/">
 
 
 
@@ -171,7 +171,7 @@
         <span class="sep">/</span>
       
       
-        <li class="current">Sandbox part 1 - basic hooking</li>
+        <li class="current">WinAPI Hooking Basics</li>
       
     
   </ol>
@@ -301,15 +301,15 @@
 
 
   <article class="page" itemscope itemtype="https://schema.org/CreativeWork">
-    <meta itemprop="headline" content="Sandbox part 1 - basic hooking">
-    <meta itemprop="description" content="In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.">
+    <meta itemprop="headline" content="WinAPI Hooking Basics">
+    <meta itemprop="description" content="API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory.  When paired with process injection, hooking can either give an insight into what an executable attempts to do or maliciously intercept and alter any calls made to the WinAPI.">
     <meta itemprop="datePublished" content="2020-06-22T00:00:00-04:00">
     
 
     <div class="page__inner-wrap">
       
         <header>
-          <h1 id="page-title" class="page__title" itemprop="headline">Sandbox part 1 - basic hooking
+          <h1 id="page-title" class="page__title" itemprop="headline">WinAPI Hooking Basics
 </h1>
           
             <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
@@ -317,7 +317,7 @@
 
 
 
-  8 minute read
+  7 minute read
 
 </p>
           
@@ -326,53 +326,19 @@
 
       <section class="page__content" itemprop="text">
         
-        <p>In this 3 part series we will be building a simple userland sandbox by hooking Windows API functions. The sandbox will be able to inject itself into a process and then intercept and interpret calls to the Windows OS. This type of software is widely used to examine malicious programs dynamically and is designed to be run in a virtual machine. By building a sandbox we are able to learn and walk through some really cool windows memory hacking techniques seen in game cheats and malware. In this first part the goal is to understand what a sandbox is and how hooking works with examples.</p>
+        <p>API hooking has been cover exhaustedly over the past decade so this is my attempt at a logical tutorial for the reader and for the purpose of better understanding it myself. This is an important topic in the realm of malware, reverse engineering, and anything involving OS memory.  When paired with process injection, hooking can either give an insight into what an executable attempts to do or maliciously intercept and alter any calls made to the WinAPI.</p>
 
-<h4 id="prerequisites-and-resources">Prerequisites and Resources</h4>
+<h4 id="background">Background</h4>
 
-<p>You will need to understand:</p>
+<p>I will be covering the popular technique of in-line hooking. This method simply attempts to replace the beginning few bytes of an exported function from a DLL loaded and used by the targeted executable/process. The overwrite will in some way jump to a memory location inside the process that you control. From there its up to you to decide what happens with the intercepted call. You could for example, hook CreateFile and once a call is intercepted, just drop it and return unsuccessfully. The effect in this example would be denying access to creating files, or if more targeted, denying access to only certain files.</p>
 
-<ul>
-  <li><a href="https://support.microsoft.com/en-us/help/815065/what-is-a-dll">DLLs</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/procthread/processes-and-threads">Windows processes and threads</a>, <a href="https://docs.microsoft.com/en-us/windows/win32/debug/pe-format">PE file format</a></li>
-  <li>C/C++, basic x86, debugging</li>
-</ul>
-
-<p>Resources I used:</p>
-
-<ul>
-  <li><a href="http://www.binaryguard.com/bgc/malware/sandbox/2015/11/09/dissecting_inline_hooks.html">dissecting inline hooks</a></li>
-  <li><a href="http://jbremer.org/x86-api-hooking-demystified/">x86 api hooking demystified</a></li>
-  <li><a href="https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html">inline hooking for programmers</a></li>
-</ul>
-
-<h4 id="so-what-is-a-sandbox">So what is a sandbox?</h4>
-
-<p>A sandbox is designed to examine the behavior of an executable and is largely used in Cybersecurity solutions for analyzing malware. There are a few open source projects like <a href="https://cuckoosandbox.org/">Cuckoo</a>.</p>
-
-<p>The idea is to run a program in a controlled environment to see what it attempts to do. A native executable will need to reach out to the host operating system in order to have any functionality. For example, it might need to manipulate a file using the I/O functions or use sockets to connect to remote servers. In order to intercept these calls to the operating system, a userland sandbox will need to sit in the middle of this communication.</p>
-
-<p>We will be building a sandbox for Windows executables, which have the PE file <a href="https://docs.microsoft.com/en-us/windows/win32/debug/pe-format">format</a>. The Windows API (win32 API) allows for userland programs to interact with the Windows OS by providing functions in shared libraries called <em>Dynamically Linked Libraries</em>. The sandbox will need to monitor these functions.</p>
-
-<p><img src="/assets/images/Sandbox.PNG" alt="Sandbox" class="align-center" /></p>
-
-<p>Since every process essentially has their very own copy of Windows DLLs needed to execute, our sandbox will need to be injected into the executable’s process that we want to examine. Once injected the sandbox can insert changes known as <em>hooks</em> into the imported DLL functions that will now be used by the executable.</p>
-
-<p><strong>How it works:</strong></p>
-
-<ol>
-  <li>Attach to a process, and inject our own DLL (Part 2)</li>
-  <li>Hook Windows API functions from within the injected process (Part 1, <em>you are here</em>)</li>
-  <li>Intercept and monitor API calls</li>
-  <li>profit???</li>
-</ol>
-
-<p>I will cover injection in part 2 so stay tuned. First lets understand hooks.</p>
+<p>Its easy to envision the usefulness of this powerful technique. There has been a lot of development using hooking methods, including game cheats, Anti-Virus/EDR, and malware. This guide is oriented for userland hooking and seeks to provide you the core understanding of how hooking works,.</p>
 
 <h4 id="the-classic-5-byte-hook">The classic 5 byte hook</h4>
 
 <p>We will be hooking the <a href="https://docs.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-messageboxa">MessageBoxA</a> function by replacing its first 5 bytes with a <code class="language-plaintext highlighter-rouge">jmp</code> instruction to our own function. The MessageBoxA function simply displays a pop up text box with a title and dialog. By hooking it we will be able to intercept calls and alter the arguments.</p>
 
-<p><img src="/assets/images/mbox_prolog.PNG" alt="mbox_prolog" class="align-center" /></p>
+<p><img src="../assets/images/SandboxPart1/mbox_prolog.PNG" alt="mbox_prolog" class="align-center" /></p>
 
 <p>Here I have disassembled <code class="language-plaintext highlighter-rouge">user32.dll</code> and found the function we would like to hook. The highlighted 5 bytes correspond to the assembly instructions directly to the right. This set of instructions is a fairly typical prologue found in many API functions.</p>
 
@@ -380,7 +346,7 @@
 
 <p>The <code class="language-plaintext highlighter-rouge">jmp</code> instruction is a relative jump to an offset starting from the next instruction’s address. The corresponding <code class="language-plaintext highlighter-rouge">jmp</code> opcode is <code class="language-plaintext highlighter-rouge">E9</code> and it takes a 4 byte offset that we will need to calculate.</p>
 
-<p><img src="/assets/images/5bytehook.PNG" alt="mbox_prolog" class="align-center" /></p>
+<p><img src="../assets/images/SandboxPart1/5bytehook.PNG" alt="mbox_prolog" class="align-center" /></p>
 
 <p>Lets first get the address of MessageBoxA in memory.</p>
 
@@ -468,7 +434,7 @@
 
 <p>We can use a trampoline function to keep our hook intact while not causing infinite recursion. The trampoline’s job is to execute the original bytes from function that we hooked and then jump past the installed hook. We can call it from the proxy function.</p>
 
-<p><img src="/assets/images/trampoline.PNG" alt="mbox_prolog" class="align-center" /></p>
+<p><img src="../assets/images/SandboxPart1/trampoline.PNG" alt="mbox_prolog" class="align-center" /></p>
 
 <p>By jumping 5 bytes past the original function’s address we are not executing the relative <code class="language-plaintext highlighter-rouge">jmp</code> to the proxy function, by passing the installed hook.</p>
 
@@ -541,10 +507,6 @@
 
 <p>We covered a simple 5 byte - relative jump hook that should have given you a taste of what hooks are and how they can be useful. There are many ways to implement hooks, some more complicated than others. Please see <a href="http://jbremer.org/x86-api-hooking-demystified/">here</a> for more hooking examples.</p>
 
-<p>The sandbox that were building will need to hook many functions. Since this can quickly get quite tedious due to the fact that each target function is different, we will need a hooking engine. A hooking engine will be able to hook any function given to it utilizing an internal disassembler - see <a href="https://www.malwaretech.com/2015/01/inline-hooking-for-programmers-part-1.html">here</a>. Its important to understand the fundamentals of implementing your own hooks, but for our sandbox we will be using a hooking library.</p>
-
-<p>In the next part we will be going over process injection, where we will be hooking some simple malware to analyze what its doing. The code referenced in this post can be found <a href="https://github.com/jayo78/basic-hooking">here</a>. Thanks for reading! part 2 coming.</p>
-
         
       </section>
 
@@ -564,22 +526,22 @@
     <h4 class="page__share-title">Share on</h4>
   
 
-  <a href="https://twitter.com/intent/tweet?text=Sandbox+part+1+-+basic+hooking%20http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
+  <a href="https://twitter.com/intent/tweet?text=WinAPI+Hooking+Basics%20http%3A%2F%2Flocalhost%3A4000%2FWinAPI-Hooking-basics%2F" class="btn btn--twitter" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Twitter"><i class="fab fa-fw fa-twitter" aria-hidden="true"></i><span> Twitter</span></a>
 
-  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
+  <a href="https://www.facebook.com/sharer/sharer.php?u=http%3A%2F%2Flocalhost%3A4000%2FWinAPI-Hooking-basics%2F" class="btn btn--facebook" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on Facebook"><i class="fab fa-fw fa-facebook" aria-hidden="true"></i><span> Facebook</span></a>
 
-  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2FSandbox-part-1-hooking-basics%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
+  <a href="https://www.linkedin.com/shareArticle?mini=true&url=http%3A%2F%2Flocalhost%3A4000%2FWinAPI-Hooking-basics%2F" class="btn btn--linkedin" onclick="window.open(this.href, 'window', 'left=20,top=20,width=500,height=500,toolbar=1,resizable=0'); return false;" title="Share on LinkedIn"><i class="fab fa-fw fa-linkedin" aria-hidden="true"></i><span> LinkedIn</span></a>
 </section>
 
 
       
   <nav class="pagination">
     
-      <a href="/Learning-x86-with-the-winAPI/" class="pagination--pager" title="Learning x86 with the winAPI
-">Previous</a>
+      <a href="#" class="pagination--pager disabled">Previous</a>
     
     
-      <a href="#" class="pagination--pager disabled">Next</a>
+      <a href="/Sandbox-part-1-injecting-hooks/" class="pagination--pager" title="Sandbox part 1 - injecting hooks
+">Next</a>
     
   </nav>
 
@@ -603,7 +565,7 @@
     
     <h2 class="archive__item-title" itemprop="headline">
       
-        <a href="/Learning-x86-with-the-winAPI/" rel="permalink">Learning x86 with the winAPI
+        <a href="/Sandbox-part-2-hooking-engine/" rel="permalink">Sandbox part 2 - hooking engine
 </a>
       
     </h2>
@@ -613,11 +575,39 @@
 
 
 
-  8 minute read
+  4 minute read
 
 </p>
     
-    <p class="archive__item-excerpt" itemprop="description">This is a short overview of the x86 assembly instruction set in a windows environment for complete beginners. We will tediously walk through a “helloworld” p...</p>
+    <p class="archive__item-excerpt" itemprop="description">In part 2 we will first deal with implementing the open-source hooking library, minhook, as our hooking engine to ensure more reliable and efficient hooks. T...</p>
+  </article>
+</div>
+
+        
+          
+
+
+
+<div class="grid__item">
+  <article class="archive__item" itemscope itemtype="https://schema.org/CreativeWork">
+    
+    <h2 class="archive__item-title" itemprop="headline">
+      
+        <a href="/Sandbox-part-1-injecting-hooks/" rel="permalink">Sandbox part 1 - injecting hooks
+</a>
+      
+    </h2>
+    
+      <p class="page__meta"><i class="far fa-clock" aria-hidden="true"></i> 
+
+
+
+
+  4 minute read
+
+</p>
+    
+    <p class="archive__item-excerpt" itemprop="description">In this 2 part series I will walk through creating a simple userland sandbox that is able to peak inside the functionality of a windows executable. It does t...</p>
   </article>
 </div>
 
