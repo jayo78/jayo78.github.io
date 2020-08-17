@@ -11,7 +11,7 @@ API hooking has been cover exhaustedly over the past decade so this is my attemp
 
 I will be covering the popular technique of in-line hooking. This method simply attempts to replace the beginning few bytes of an exported function from a DLL loaded and used by the targeted executable/process. The overwrite will in some way jump to a memory location inside the process that you control. From there its up to you to decide what happens with the intercepted call. You could for example, hook CreateFile and once a call is intercepted, just drop it and return unsuccessfully. The effect in this example would be denying access to creating files, or if more targeted, denying access to only certain files.
 
-Its easy to envision the usefulness of this powerful technique. There has been a lot of development using hooking methods, including game cheats, Anti-Virus/EDR, and malware. This guide is oriented for userland hooking and seeks to provide you the core understanding of how hooking works,.
+Its easy to envision the usefulness of this powerful technique. There has been a lot of development using various hooking methods, including in game cheats, Anti-Virus/EDR, and malware. This guide is oriented for userland hooking and seeks to provide you the core understanding of how it all works through a simple example.
 
 #### The classic 5 byte hook
 
