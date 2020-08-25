@@ -95,7 +95,7 @@ analytics:
 author:
   name             : "Jayson Hurst"
   avatar           : /assets/images/avatar.jpg # path of avatar image, e.g. "/assets/images/bio-photo.jpg"
-  bio              : "RE | Programming | Security<br>Student at UMD"
+  bio              : "RE, Programming, Security<br>Student at UMD"
   location         : "Philadelphia, PA"
   email            : jhurst1@terpmail.umd.edu
   links:
