@@ -1,6 +1,6 @@
 ---
 layout: single
-title: Sandbox part 1 - injecting hooks
+title: Sandbox part 1 - Injection
 date: 2020-07-01
 classes: wide
 ---
