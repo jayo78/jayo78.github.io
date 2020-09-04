@@ -1,6 +1,6 @@
 ---
 layout: single
-title: Sandbox part 2 - hooking engine 
+title: Sandbox part 2 - Hooking Engine 
 date: 2020-07-22
 classes: wide
 ---
